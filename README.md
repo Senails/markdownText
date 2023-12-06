@@ -119,7 +119,7 @@ async function fixActualDevValue(storyId){
         console.log(`Стори #${storyId}: ActualDev не найден в истории`);
         return;
     }
-    // await setActualDevValue(story, actualDevByHistory);
+    await setActualDevValue(story, actualDevByHistory);
     console.log(`Стори #${storyId}: был успешно задан ActualDev (${actualDevByHistory} point${actualDevByHistory === 1 ? '' : 's' })`);
     return;
 }
