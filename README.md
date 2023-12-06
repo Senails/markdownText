@@ -6,16 +6,26 @@ const FETCH_CONFIG = {
         "Content-Type": "application/json"
     }
 };
-const CUSTOM_FIELD_NAME = "Actual dev";
+const CUSTOM_FIELD_NAME = 'Actual dev';
 const LOCAL_STORAGE_KEY = 'ActualDevFixStoriId';
 const LOCAL_STORAGE_ERROR_KEY = 'ActualDevErrorMessage';
 const customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
 const ACTUAL_DEV_FIELD_ID = customFieldsJson.find((elem) => elem.name === CUSTOM_FIELD_NAME).id;
+
 async function getHistoryByStoryID(id){
     let res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, FETCH_CONFIG);
     let json = await res.json();
     return json;
 }
+
+const CUSTOM_FIELD_NAMES = ['Actual dev','Actual'];
+
+// 0.1 Проверка NAME
+// применяется только в получении данных из истории 
+function checkName(name) {
+    return CUSTOM_FIELD_NAMES.includes(name);
+}
+
 // 1 функция для получения числа если оно есть в истории
 async function findActualDevByHistory(id) {
     const historyArr = await getHistoryByStoryID(id);
@@ -23,15 +33,14 @@ async function findActualDevByHistory(id) {
         if (!el.references) {
             return false;
         }
-        const reference = el.references
-            .find( ref => ref.field_name === CUSTOM_FIELD_NAME);
+        const reference = el.references.find( ref => checkName(ref.field_name));
         return !!reference;
     });
     if (!elem) {
         return;
     }
     const reference = elem.references
-        .find( obj => obj.field_name && obj.field_name === CUSTOM_FIELD_NAME);
+        .find( obj => obj.field_name && checkName(obj.field_name));
     if (!reference) {
         return;
     }
@@ -111,7 +120,7 @@ async function fixActualDevValue(storyId){
         console.log(`Стори #${storyId}: ActualDev не найден в истории`);
         return;
     }
-    await setActualDevValue(story, actualDevByHistory);
+    // await setActualDevValue(story, actualDevByHistory);
     console.log(`Стори #${storyId}: был успешно задан ActualDev (${actualDevByHistory} point${actualDevByHistory === 1 ? '' : 's' })`);
     return;
 }
@@ -137,5 +146,7 @@ async function processStories(rangeStart = 1, rangeEnd){
         console.error(e);
     }
 }
+
+
 await processStories(1, 17500);
 ```
