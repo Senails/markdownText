@@ -6,11 +6,15 @@ const FETCH_CONFIG = {
         "Content-Type": "application/json"
     }
 };
+
 const CUSTOM_FIELD_NAME = 'Actual dev';
 const NAMES_FOR_HISTORTY = ['Actual dev','Actual'];
+
 const LOCAL_STORAGE_KEY = 'ActualDevFixStoriId';
 const LOCAL_STORAGE_ERROR_KEY = 'ActualDevErrorMessage';
+
 const customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
+
 const ACTUAL_DEV_FIELD_ID = customFieldsJson.find((elem) => elem.name === CUSTOM_FIELD_NAME).id;
 
 async function getHistoryByStoryID(id){
