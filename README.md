@@ -7,6 +7,7 @@ const FETCH_CONFIG = {
     }
 };
 const CUSTOM_FIELD_NAME = 'Actual dev';
+const NAMES_FOR_HISTORTY = ['Actual dev','Actual'];
 const LOCAL_STORAGE_KEY = 'ActualDevFixStoriId';
 const LOCAL_STORAGE_ERROR_KEY = 'ActualDevErrorMessage';
 const customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
@@ -18,12 +19,10 @@ async function getHistoryByStoryID(id){
     return json;
 }
 
-const CUSTOM_FIELD_NAMES = ['Actual dev','Actual'];
-
 // 0.1 Проверка NAME
 // применяется только в получении данных из истории 
 function checkName(name) {
-    return CUSTOM_FIELD_NAMES.includes(name);
+    return NAMES_FOR_HISTORTY.includes(name);
 }
 
 // 1 функция для получения числа если оно есть в истории
