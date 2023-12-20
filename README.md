@@ -411,8 +411,25 @@ function saveInExchangeBuffer( string ) {
     document.body.removeChild(textarea);
 }
 
-// просим данные из буфера обмена
-async function askExchangeBuffer() {
+// получаем из в буфера обмена
+function getFromExChangeBuffer() {
+    return new Promise( (res,rej) => {
+        const contentEditable = document.createElement("div");
+        contentEditable.setAttribute("contenteditable", true);
+        
+        navigator.clipboard.readText().then( (pastedText) => {
+            res(pastedText);
+            document.body.removeChild(contentEditable);
+        })
+        
+        document.body.appendChild(contentEditable);
+        contentEditable.focus();
+        document.execCommand('paste');
+    });
+}
+
+// просим пользователя кликнуть, что бы получить доступ
+async function askExchangeBuffer(message) {
     return new Promise( ( res ) => {
         const clickHandler = async () => {
             const text = await getFromExChangeBuffer();
@@ -421,25 +438,8 @@ async function askExchangeBuffer() {
         }
         
         document.addEventListener('click', clickHandler);
-        console.log('Пожалуйста кликните по странице');
-        console.log('Скрипту нужен доступ к буферу обмена');
+        console.log(message);
     });
-    
-    function getFromExChangeBuffer() {
-        return new Promise( (res,rej) => {
-            const contentEditable = document.createElement("div");
-            contentEditable.setAttribute("contenteditable", true);
-            
-            navigator.clipboard.readText().then( (pastedText) => {
-                res(pastedText);
-                document.body.removeChild(contentEditable);
-            })
-            
-            document.body.appendChild(contentEditable);
-            contentEditable.focus();
-            document.execCommand('paste');
-        });
-}
 }
 
 // Шаг1 сбор статистики с шотката (shortcut)
@@ -492,16 +492,23 @@ async function step2(inputData, saveData) {
 }
 
 // Шаг3 обьеденение статистик (shortcut)
-async function step3(data, saveData, prevData = []) {
-    const allStats = prevData;
-    let actualId = rangeStart;
-
+function step3(data1, data2) {
+    if (data1.length !== data2.length) {
+        throw new Error();
+    }
     
+    return data1.map( (strory, i) => {
+        result.push({
+            ...strory,
+            ...data2[i],
+        })
+    });
 }
 
 async function collectStatsInRange(rangeStart, rangeEnd) {
     const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
-    const exchangeBufferDataJson = await askExchangeBuffer();
+    await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
+    const exchangeBufferDataJson = await getFromExChangeBuffer();
     
     let localStorageData = localStorageDataJson && JSON.parse(localStorageDataJson) || null;
     let exchangeBufferData;
@@ -515,6 +522,43 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     const url = new URL(location.href).origin;
     
     if ( url === 'https://app.shortcut.com' ) {
+        if (
+            localStorageData
+            && localStorageData.step === 3
+            && localStorageData.isSucces
+            && localStorageData.rangeStart === rangeStart
+            && localStorageData.rangeEnd === rangeEnd
+        ) {
+            const finalData = localStorageData.data;
+            console.log(finalData);
+        }
+
+        if (
+            exchangeBufferData
+            && exchangeBufferData.step === 2
+            && exchangeBufferData.isSucces
+            && exchangeBufferData.rangeStart === rangeStart
+            && exchangeBufferData.rangeEnd === rangeEnd
+            && localStorageData
+            && localStorageData.step === 1
+            && localStorageData.isSucces
+            && localStorageData.rangeStart === rangeStart
+            && localStorageData.rangeEnd === rangeEnd
+        ) {
+            const finalData = step3(localStorageData.data, exchangeBufferData.data);
+
+            console.log(finalData);
+            
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                step: 3,
+                isSucces,
+                data: finalData,
+                rangeStart,
+                rangeEnd,
+            }))
+        }
+
+        
         if (
             !localStorageData
             || (localStorageData.step === 1 && !localStorageData.isSucces)
@@ -538,7 +582,7 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
                         pulls: story.pulls
                     }))
 
-                    await askExchangeBuffer();
+                    await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
                     saveInExchangeBuffer(JSON.stringify(save));
                     
                     console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище, данные для сбора на гитхабе помещены в буфер обмена');
@@ -579,7 +623,6 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
             || (localStorageData.rangeEnd !== rangeEnd))
         ) {
             return await step2( exchangeBufferData.data, async ( isSucces, data ) => { 
-                saveInExchangeBuffer('');
                 const save = {
                     step: 2,
                     isSucces,
@@ -591,7 +634,8 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
                 
                 localStorage.setItem(LOCAL_STORAGE_KEY, text)
                 if (isSucces) {
-                    await askExchangeBuffer();
+                    console.log('начинаем сбор данных, это может занять какое то время');
+                    await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
                     saveInExchangeBuffer(text);
                     
                     console.log('данные с гитхаба сохранены в локальном хранилище и буфере обмена');
@@ -620,6 +664,5 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     }
 }
 
-await collectStatsInRange(13306, 13400);
-
+await collectStatsInRange(13306, 13402);
 ```
