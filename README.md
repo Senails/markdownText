@@ -6,18 +6,25 @@ const FETCH_CONFIG = {
         "Content-Type": "application/json"
     }
 };
+const LOCAL_STORAGE_KEY = 'collecting_statistics';
 
-const customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
-const membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
+// let customFieldsJson;
+// let membersListJson;
+if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
+    window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
+    window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
+}
 
 async function getHistoryByStoryID(id){
     let res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, FETCH_CONFIG);
     let json = await res.json();
+    
     return json;
 }
 async function getStoryObjectByStoryId(id) {
     const res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}`, FETCH_CONFIG );
     const storyObject = await res.json();
+    
     return storyObject;
 }
 
@@ -235,7 +242,7 @@ function createStoryStats(story, storyHistory) {
 async function getStoryStatsById( storiId ) {
     const story = await getStoryObjectByStoryId(storiId);
 
-    if (story) {
+    if (!(story.message && story.message === 'Resource not found.')) {
         const storyHistory = await getHistoryByStoryID(storiId);
         return createStoryStats(story, storyHistory);
     }
@@ -397,10 +404,6 @@ async function callectPullData( url ) {
     };
 }
 
-
-const stats = await getStoryStatsById(13306);
-console.log(stats);
-
 // сохранить в буфере обмена
 function saveInExchangeBuffer( string ) {
     const textarea = document.createElement("textarea");
@@ -442,9 +445,147 @@ async function askExchangeBuffer() {
 }
 }
 
-// saveInExchangeBuffer('12345')
-// const res = await askExchangeBuffer();
+// Шаг1 сбор статистики с шотката (shortcut)
+async function step1(rangeStart, rangeEnd, saveData) {
+    const allStats = [];
+    let actualId = rangeStart;
 
-// console.log(res);
+    try {
+        while ( actualId <= rangeEnd) {
+            const storyStats = await getStoryStatsById(actualId);
+            if (storyStats) {
+                allStats.push(storyStats);
+            }
+    
+            console.log(`Сибираем статистику по сторям ${actualId - rangeStart +1} / ${rangeEnd - rangeStart +1}`);
+            actualId++;
+        }
+
+        saveData(true, allStats);
+    } catch {
+        saveData(false, allStats);
+    }
+}
+
+// Шаг2 сбор статистики с гитхаба (github)
+async function step2(inputData, saveData) {
+    const outputData = [];
+    let i = 1;
+
+    try {
+        for( const statsStory of inputData) {
+            let obj = {
+                pulls: await Promise.all(statsStory.pulls.map( pull => {
+                    return new Promise( async (res) => {
+                        res({
+                            ...pull,
+                            ...(await callectPullData(pull.url))
+                        });
+                    })
+                }))
+            };
+            outputData.push(obj);
+            console.log(`Собираем данные по пулам для каждой стори ${i++} / ${inputData.length}`);
+        }
+        saveData(true, outputData);
+    } catch(e) {
+        console.log(e);
+        saveData(false, outputData);
+    }
+}
+
+// Шаг3 обьеденение статистик (shortcut)
+async function step3(data, saveData, prevData = []) {
+    const allStats = prevData;
+    let actualId = rangeStart;
+
+    
+}
+
+async function collectStatsInRange(rangeStart, rangeEnd) {
+    const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const exchangeBufferDataJson = await askExchangeBuffer();
+    
+    let localStorageData = localStorageDataJson && JSON.parse(localStorageDataJson) || null;
+    let exchangeBufferData;
+
+    try {
+        exchangeBufferData = JSON.parse(exchangeBufferDataJson);
+    } catch {
+        exchangeBufferData = null
+    }
+
+    const url = new URL(location.href).origin;
+    
+    if ( url === 'https://app.shortcut.com' ) {
+        if (
+            !localStorageData
+            || (localStorageData.step === 1 && !localStorageData.isSucces)
+            || (localStorageData.rangeStart !== rangeStart)
+            || (localStorageData.rangeEnd !== rangeEnd)
+        ) {
+            await step1 (rangeStart, rangeEnd, (isSucces, data) => {
+                saveInExchangeBuffer('');
+                const save = {
+                    step: 1,
+                    isSucces,
+                    data,
+                    rangeStart,
+                    rangeEnd,
+                }
+                
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(save))
+                if (isSucces) {
+                    save.data = save.data.map( story => ({
+                        story_id: story.story,
+                        pulls: story.pulls
+                    }))
+        
+                    saveInExchangeBuffer(JSON.stringify(save));
+                    console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
+                    console.log('можно перейти на страницу гитхаба и запустить скрипт там');
+                    console.log('https://github.com/Good-Proton/data-layer/pull/549');
+                } else {
+                    console.log('что то пошло не так');
+                }
+            })
+            return;
+        }
+
+        if (!exchangeBufferData) {
+            const dataForBuffer = localStorageData;
+            dataForBuffer.data = dataForBuffer.data.map( story => ({
+                story_id: story.story_id,
+                pulls: story.pulls
+            }));
+
+            
+            saveInExchangeBuffer(JSON.stringify(dataForBuffer));
+            console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
+            console.log('можно перейти на страницу гитхаба и запустить скрипт там');
+            console.log('https://github.com/Good-Proton/data-layer/pull/549');
+
+            return;
+        }
+    }
+
+    if ( url === 'https://github.com') {
+        console.log(exchangeBufferData);
+        
+        if (
+            exchangeBufferData 
+            && exchangeBufferData.step === 1
+            && exchangeBufferData.isSucces
+        ) {
+            await step2( exchangeBufferData.data, ( isSucces, data ) => {
+                console.log(exchangeBufferData.data)
+                console.log(isSucces, data)
+            })
+        }
+    }
+}
+
+
+await collectStatsInRange(13306, 13401)
 
 ```
