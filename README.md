@@ -471,7 +471,7 @@ async function step1(rangeStart, rangeEnd, saveData) {
                 allStats.push(storyStats);
             }
     
-            console.log(`Сибираем статистику по сторям ${actualId - rangeStart +1} / ${rangeEnd - rangeStart +1}`);
+            console.log(`Сибираем статистику по сторям ${actualId - rangeStart +1} / ${rangeEnd - rangeStart +1} story_id = ${actualId}`);
             actualId++;
         }
 
@@ -499,7 +499,7 @@ async function step2(inputData, saveData) {
                 }))
             };
             outputData.push(obj);
-            console.log(`Собираем данные по пулам для каждой стори ${i++} / ${inputData.length}`);
+            console.log(`Собираем данные по пулам для каждой стори ${i++} / ${inputData.length} story_id = ${statsStory.story_id}`);
         }
         await saveData(true, outputData);
     } catch(e) {
@@ -687,5 +687,5 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     }
 }
 
-await collectStatsInRange(13306, 13407);
+// await collectStatsInRange(15000, 16000);
 ```
