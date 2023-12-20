@@ -8,8 +8,6 @@ const FETCH_CONFIG = {
 };
 const LOCAL_STORAGE_KEY = 'collecting_statistics';
 
-// let customFieldsJson;
-// let membersListJson;
 if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
     window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
     window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
@@ -249,7 +247,6 @@ async function getStoryStatsById( storiId ) {
     
     return;
 }
-
 
 // В гитхабе все данные подгружается в виде html кусков
 // поэтому поиск осуществляю так же загружая html, и проводя поиск в коде
@@ -584,7 +581,6 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
         }
     }
 }
-
 
 await collectStatsInRange(13306, 13401)
 
