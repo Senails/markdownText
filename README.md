@@ -640,6 +640,7 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
             && localStorageData
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
+            && localStorageData.isSucces
             && exchangeBufferData.rangeStart === localStorageData.rangeStart
             && exchangeBufferData.rangeEnd === localStorageData.rangeEnd
         ) {
@@ -687,5 +688,4 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
 }
 
 await collectStatsInRange(13306, 13406);
-
 ```
