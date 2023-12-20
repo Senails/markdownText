@@ -445,7 +445,7 @@ async function askExchangeBuffer(message) {
 // сохраняем статистику в файл
 async function saveAsFile( data, fileName) {
     const obj = { data };
-    const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' });
     
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -687,5 +687,5 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     }
 }
 
-await collectStatsInRange(13306, 13406);
+await collectStatsInRange(13306, 13407);
 ```
