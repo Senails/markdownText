@@ -442,6 +442,23 @@ async function askExchangeBuffer(message) {
     });
 }
 
+// сохраняем статистику в файл
+async function saveAsFile( data, fileName) {
+    const obj = { data };
+    const blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    
+    a.href = url;
+    a.download = fileName;
+    
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 // Шаг1 сбор статистики с шотката (shortcut)
 async function step1(rangeStart, rangeEnd, saveData) {
     const allStats = [];
@@ -497,12 +514,7 @@ function step3(data1, data2) {
         throw new Error();
     }
     
-    return data1.map( (strory, i) => {
-        result.push({
-            ...strory,
-            ...data2[i],
-        })
-    });
+    return data1.map( (strory, i) => ({...strory, ...data2[i] }));
 }
 
 async function collectStatsInRange(rangeStart, rangeEnd) {
@@ -530,40 +542,67 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
             && localStorageData.rangeEnd === rangeEnd
         ) {
             const finalData = localStorageData.data;
+            
+            console.log('Данные сохранены в локальном хранилище');
             console.log(finalData);
+
+            await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
+            await saveAsFile(finalData, 'stats');
         }
 
         if (
             exchangeBufferData
+            && localStorageData
             && exchangeBufferData.step === 2
+            && localStorageData.step === 1
             && exchangeBufferData.isSucces
-            && exchangeBufferData.rangeStart === rangeStart
-            && exchangeBufferData.rangeEnd === rangeEnd
+            && localStorageData.isSucces
+            && exchangeBufferData.rangeStart === localStorageData.rangeStart
+            && exchangeBufferData.rangeEnd === localStorageData.rangeEnd
+        ) {
+            const finalData = step3(localStorageData.data, exchangeBufferData.data);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+                step: 3,
+                isSucces: true,
+                data: finalData,
+                rangeStart,
+                rangeEnd,
+            }))
+            
+            console.log('Данные сохранены в локальном хранилище');
+            console.log(finalData);
+
+            await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
+            await saveAsFile(finalData, 'stats');
+        }
+
+        if (
+            !exchangeBufferData
             && localStorageData
             && localStorageData.step === 1
             && localStorageData.isSucces
             && localStorageData.rangeStart === rangeStart
             && localStorageData.rangeEnd === rangeEnd
         ) {
-            const finalData = step3(localStorageData.data, exchangeBufferData.data);
+            const dataForBuffer = localStorageData;
+            dataForBuffer.data = dataForBuffer.data.map( story => ({
+                story_id: story.story_id,
+                pulls: story.pulls
+            }));
 
-            console.log(finalData);
             
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
-                step: 3,
-                isSucces,
-                data: finalData,
-                rangeStart,
-                rangeEnd,
-            }))
-        }
+            saveInExchangeBuffer(JSON.stringify(dataForBuffer));
+            console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
+            console.log('можно перейти на страницу гитхаба и запустить скрипт там');
+            console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
 
-        
+            return;
+        } 
+
         if (
             !localStorageData
-            || (localStorageData.step === 1 && !localStorageData.isSucces)
-            || (localStorageData.rangeStart !== rangeStart)
-            || (localStorageData.rangeEnd !== rangeEnd)
+            || localStorageData.rangeStart !== rangeStart
+            || localStorageData.rangeEnd !== rangeEnd
         ) {
             await step1 (rangeStart, rangeEnd, async (isSucces, data) => {
                 saveInExchangeBuffer('');
@@ -592,43 +631,39 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
                     console.log('что то пошло не так');
                 }
             })
-            return;
-        }
-
-        if (!exchangeBufferData) {
-            const dataForBuffer = localStorageData;
-            dataForBuffer.data = dataForBuffer.data.map( story => ({
-                story_id: story.story_id,
-                pulls: story.pulls
-            }));
-
-            
-            saveInExchangeBuffer(JSON.stringify(dataForBuffer));
-            console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
-            console.log('можно перейти на страницу гитхаба и запустить скрипт там');
-            console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
-
-            return;
         }
     }
 
     if ( url === 'https://github.com') {
         if (
             exchangeBufferData 
+            && localStorageData
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
-            && (!localStorageData
-            || !localStorageData.isSucces
-            || (localStorageData.rangeStart !== rangeStart)
-            || (localStorageData.rangeEnd !== rangeEnd))
+            && exchangeBufferData.rangeStart === localStorageData.rangeStart
+            && exchangeBufferData.rangeEnd === localStorageData.rangeEnd
         ) {
+            saveInExchangeBuffer(JSON.stringify(localStorageData));
+            
+            console.log('данные с гитхаба сохранены в локальном хранилище и буфере обмена');
+            console.log('можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
+            console.log('https://app.shortcut.com/linkedhelper/story/17045/shortcut');
+            return;
+        } 
+
+        if (
+            exchangeBufferData 
+            && exchangeBufferData.step === 1
+            && exchangeBufferData.isSucces
+        ) {
+            console.log('начинаем собирать данные');
             return await step2( exchangeBufferData.data, async ( isSucces, data ) => { 
                 const save = {
                     step: 2,
                     isSucces,
                     data,
-                    rangeStart,
-                    rangeEnd,
+                    rangeStart: exchangeBufferData.rangeStart,
+                    rangeEnd: exchangeBufferData.rangeEnd,
                 }
                 const text = JSON.stringify(save);
                 
@@ -647,22 +682,9 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
             })
         }
 
-        if (
-            exchangeBufferData 
-            && exchangeBufferData.step === 1
-            && exchangeBufferData.isSucces
-        ) {
-            saveInExchangeBuffer(JSON.stringify(localStorageData));
-            
-            console.log('данные с гитхаба сохранены в локальном хранилище и буфере обмена');
-            console.log('можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
-            console.log('https://app.shortcut.com/linkedhelper/story/17045/shortcut');
-            return;
-        } 
-
         console.log('похоже в буфере обмена пусто, соберите сначало данные с шотката')
     }
 }
 
-await collectStatsInRange(13306, 13402);
+await collectStatsInRange(13306, 13406);
 ```
