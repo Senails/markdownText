@@ -350,8 +350,8 @@ function findNextUrls( html ) {
     return [];
 }
 
-// функция будет получать полное имя по нику пользователя гитхаб (github)
-async function convertNicknameToFullName(nickname) {
+// функция  получает полное имя по нику пользователя гитхаб (github)
+async function fetchNameByNickName(nickname) {
     const substr = '<span class="p-name vcard-fullname d-block overflow-hidden" itemprop="name">'
     const html = await fetchHtml(`https://github.com/${nickname}`);
 
@@ -366,9 +366,19 @@ async function convertNicknameToFullName(nickname) {
     return fullName || nickname;
 }
 
-// Функция должна брать адрес пула и возвращать обьект
-// В обьекте должны присутствовать поля:
-// owner, reviwers, qa_rejected_count, reviewer_rejected_count (github)
+// конвертация ников в имена
+const convertNicknameToFullName = (() => {
+    const dictionary = {};
+
+    return async( nickname ) => {
+        if (!dictionary[nickname]) {
+            dictionary[nickname] = await fetchNameByNickName(nickname);
+        }
+        return dictionary[nickname];
+    }
+})();
+
+// Функция должна брать адрес пула и возвращать данные по нему
 async function callectPullData( url ) {
     const pullPage = await fetchHtml(url)
 
@@ -458,7 +468,7 @@ async function askExchangeBuffer(message) {
 // сохраняем статистику в файл
 async function saveAsFile( data, fileName) {
     const obj = { data };
-    const blob = new Blob([JSON.stringify(obj, null, 1)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(obj, null, 4)], { type: 'application/json' });
     
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -502,7 +512,7 @@ async function step2(inputData, saveData) {
 
     try {
         for( const statsStory of inputData) {
-            let obj = {
+            outputData.push({
                 pulls: await Promise.all(statsStory.pulls.map( pull => {
                     return new Promise( async (res) => {
                         res({
@@ -511,10 +521,10 @@ async function step2(inputData, saveData) {
                         });
                     })
                 }))
-            };
-            outputData.push(obj);
+            });
             console.log(`Собираем данные по пулам для каждой стори ${i++} / ${inputData.length} story_id = ${statsStory.story_id}`);
         }
+        
         await saveData(true, outputData);
     } catch(e) {
         console.log(e);
@@ -549,8 +559,6 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
     const url = new URL(location.href).origin;
     
     if ( url === 'https://app.shortcut.com' ) {
-        // получаем айдишники сторей созданых в течении 2.5 лет
-        // из которых соберем статистику о сторях запущеных в разработку в этом году
         const inDevDate = new Date(inDevDateStr);
         const createDate = new Date(createDateStr);
         
@@ -599,7 +607,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
             await saveAsFile(finalData, 'stats');
         }
-
+        
         if (
             !exchangeBufferData
             && localStorageData
@@ -619,7 +627,6 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
             console.log('можно перейти на страницу гитхаба и запустить скрипт там');
             console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
-
             return;
         } 
 
@@ -656,6 +663,17 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             } else {
                 console.log('что то пошло не так');
             }
+        }
+
+        if (
+            exchangeBufferData
+            && exchangeBufferData
+            && exchangeBufferData.step === 1
+            && exchangeBufferData.isSucces
+            && exchangeBufferData.rangeStart === rangeStart
+            && exchangeBufferData.rangeEnd === rangeEnd
+        ) {
+            console.log('данные уже в буфере обмена')
         }
     }
 
@@ -714,5 +732,5 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
+// await collectStatsAfterDate('2021.06.01', '2023.01.01');
 await collectStatsAfterDate('2023.11.01', '2023.12.01');
-```
