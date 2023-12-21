@@ -126,7 +126,6 @@ function getDaysBetweenDates( dateIso1 , dateIso2) {
 
 // функция для сбора статистики с стори (shortcut)
 function createStoryStats(story, storyHistory) {
-
     const stats = {
         story_id: story.id,
         story_name: story.name,
@@ -227,8 +226,9 @@ function createStoryStats(story, storyHistory) {
     
     stats.days_between_created_and_completed =
         getDaysBetweenDates( stats.story_created_at, stats.story_completed_at);
-    
+
     stats.total_days_in_development = getTotalTimeInState(stateChangesHistory, 'In Development');
+    
     stats.total_days_ready_for_review = getTotalTimeInState(stateChangesHistory, 'Ready for Review');
     stats.total_days_ready_for_qa = getTotalTimeInState(stateChangesHistory, 'Ready for QA');
     stats.total_days_in_qa = getTotalTimeInState(stateChangesHistory, 'In QA');
@@ -239,7 +239,6 @@ function createStoryStats(story, storyHistory) {
 // функция для сбора статистики с стори по айди (shortcut)
 async function getStoryStatsById( storiId ) {
     const story = await getStoryObjectByStoryId(storiId);
-
     if (!(story.message && story.message === 'Resource not found.')) {
         const storyHistory = await getHistoryByStoryID(storiId);
         return createStoryStats(story, storyHistory);
@@ -326,8 +325,7 @@ function findOwner( html ) {
                     .replaceAll(' ','')
                     .replaceAll('\n','')
                     .match(/>(.+)<\/a><\/strong>commented<ahref=/);
-            })
-            .filter( e => e)[0][1]
+            })[0][1];
     }
     return;
 }
@@ -402,6 +400,20 @@ async function callectPullData( url ) {
     };
 }
 
+// ищем стори созданые после какой то даты (shortcut)
+async function searchStoryIdsAfteDate(date) {
+    const res = await fetch('https://app.shortcut.com/backend/api/private/stories/search',{
+        ...FETCH_CONFIG,
+        method: 'POST',
+        body: JSON.stringify({
+            created_at_start: date.toISOString()
+        }),
+    })
+    const array = await res.json();
+    
+    return array.map(s => s.id).sort((num1, num2) => num1 - num2 );
+}
+
 // сохранить в буфере обмена
 function saveInExchangeBuffer( string ) {
     const textarea = document.createElement("textarea");
@@ -461,24 +473,25 @@ async function saveAsFile( data, fileName) {
 }
 
 // Шаг1 сбор статистики с шотката (shortcut)
-async function step1(rangeStart, rangeEnd, saveData) {
+async function step1(storyIds) {
     const allStats = [];
-    let actualId = rangeStart;
 
     try {
-        while ( actualId <= rangeEnd) {
-            const storyStats = await getStoryStatsById(actualId);
-            if (storyStats) {
-                allStats.push(storyStats);
-            }
-    
-            console.log(`Сибираем статистику по сторям ${actualId - rangeStart +1} / ${rangeEnd - rangeStart +1} story_id = ${actualId}`);
-            actualId++;
+        for(const id of storyIds) {
+            const storyStats = await getStoryStatsById(id);
+            allStats.push(storyStats);
+            console.log(`Сибираем статистику по сторям ${allStats.length} / ${storyIds.length} story_id = ${id}`);
         }
-
-        await saveData(true, allStats);
-    } catch {
-        await saveData(false, allStats);
+        return {
+            isSucces: true,
+            data: allStats,
+        }
+    } catch(e) {
+        console.error(e);
+        return {
+            isSucces: false,
+            data: allStats,
+        }
     }
 }
 
@@ -518,7 +531,8 @@ function step3(data1, data2) {
     return data1.map( (strory, i) => ({...strory, ...data2[i] }));
 }
 
-async function collectStatsInRange(rangeStart, rangeEnd) {
+async function collectStatsAfterDate(string) {
+    // получаем данные из хранилища и буфера обмена
     const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
     await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
     const exchangeBufferDataJson = await getFromExChangeBuffer();
@@ -535,6 +549,24 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     const url = new URL(location.href).origin;
     
     if ( url === 'https://app.shortcut.com' ) {
+        // получаем айдишники сторей созданых в течении 2.5 лет
+        // из которых соберем статистику о сторях запущеных в разработку в этом году
+        
+        // const currentDate = new Date(string);
+
+        // const oneAndHalfYearsAgo = new Date();
+        // oneAndHalfYearsAgo.setFullYear(currentDate.getFullYear() - 1);
+        // oneAndHalfYearsAgo.setMonth(currentDate.getMonth() - 6);
+
+        const currentDate = new Date('2023.12.01');
+
+        const oneAndHalfYearsAgo = new Date();
+        oneAndHalfYearsAgo.setMonth(currentDate.getMonth() - 1);
+        
+        const arrayStoryIds = await searchStoryIdsAfteDate(oneAndHalfYearsAgo);
+        const rangeStart = arrayStoryIds[0];
+        const rangeEnd = arrayStoryIds[arrayStoryIds.length-1];
+        
         if (
             localStorageData
             && localStorageData.step === 3
@@ -566,8 +598,8 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
                 step: 3,
                 isSucces: true,
                 data: finalData,
-                rangeStart,
-                rangeEnd,
+                rangeStart: localStorageData.rangeStart,
+                rangeEnd: localStorageData.rangeEnd,
             }))
             
             console.log('Данные сохранены в локальном хранилище');
@@ -605,33 +637,34 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
             || localStorageData.rangeStart !== rangeStart
             || localStorageData.rangeEnd !== rangeEnd
         ) {
-            await step1 (rangeStart, rangeEnd, async (isSucces, data) => {
-                saveInExchangeBuffer('');
-                const save = {
+            const {isSucces, data} = await step1(arrayStoryIds);
+            const filteredData = data
+                .filter( stats => new Date(stats.first_move_to_in_development) - currentDate > 0);
+            
+            const save = {
                     step: 1,
                     isSucces,
-                    data,
+                    data: filteredData,
                     rangeStart,
                     rangeEnd,
                 }
-                
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(save))
-                if (isSucces) {
-                    save.data = save.data.map( story => ({
-                        story_id: story.story_id,
-                        pulls: story.pulls
-                    }))
 
-                    await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
-                    saveInExchangeBuffer(JSON.stringify(save));
-                    
-                    console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище, данные для сбора на гитхабе помещены в буфер обмена');
-                    console.log('можно перейти на страницу гитхаба и запустить скрипт там, для продолжения сбора статистики');
-                    console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
-                } else {
-                    console.log('что то пошло не так');
-                }
-            })
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(save))
+            if (isSucces) {
+                save.data = save.data.map( story => ({
+                    story_id: story.story_id,
+                    pulls: story.pulls
+                }))
+
+                await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
+                saveInExchangeBuffer(JSON.stringify(save));
+                
+                console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище, данные для сбора на гитхабе помещены в буфер обмена');
+                console.log('можно перейти на страницу гитхаба и запустить скрипт там, для продолжения сбора статистики');
+                console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
+            } else {
+                console.log('что то пошло не так');
+            }
         }
     }
 
@@ -688,5 +721,5 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     }
 }
 
-await collectStatsInRange(15000, 16001);
+await collectStatsAfterDate('2023.01.01');
 ```
