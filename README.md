@@ -316,7 +316,7 @@ function findReviewers( html ) {
 function findOwner( html ) {
     const subst = '<a class="author Link--primary text-bold css-overflow-wrap-anywhere " show_full_name="false" data-hovercard-type="user" data-hovercard-url=';
     const positions = findStringPositions( html, subst);
-
+    
     if (positions.length) {
         return positions
             .map( index => html.substring(index, index + 450))
@@ -325,8 +325,9 @@ function findOwner( html ) {
                 return textPart
                     .replaceAll(' ','')
                     .replaceAll('\n','')
-                    .match(/>(.+)<\/a><\/strong>commented<ahref=/)[1];
-            })[0]
+                    .match(/>(.+)<\/a><\/strong>commented<ahref=/);
+            })
+            .filter( t => t)[0][1];
     }
     return;
 }
@@ -687,5 +688,5 @@ async function collectStatsInRange(rangeStart, rangeEnd) {
     }
 }
 
-// await collectStatsInRange(15000, 16000);
+await collectStatsInRange(15000, 16000);
 ```
