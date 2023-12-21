@@ -1,5 +1,5 @@
 ```js
-const FETCH_CONFIG = {
+**const FETCH_CONFIG = {
     headers:{
         "Tenant-Organization2": "5c916c11-d2f0-4c6b-aa34-be3b41942057",
         "Tenant-Workspace2": "5c9176af-ad29-45f1-94f0-7e5e1d9491c0",
@@ -747,5 +747,5 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
 await collectStatsAfterDate('2021.06.01', '2023.01.01');
-// await collectStatsAfterDate('2023.11.01', '2023.12.01'); 
+// await collectStatsAfterDate('2023.11.01', '2023.12.01');
 ```
