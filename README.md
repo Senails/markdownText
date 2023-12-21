@@ -531,7 +531,7 @@ function step3(data1, data2) {
     return data1.map( (strory, i) => ({...strory, ...data2[i] }));
 }
 
-async function collectStatsAfterDate(string) {
+async function collectStatsAfterDate( createDateStr, inDevDateStr) {
     // получаем данные из хранилища и буфера обмена
     const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
     await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
@@ -551,19 +551,10 @@ async function collectStatsAfterDate(string) {
     if ( url === 'https://app.shortcut.com' ) {
         // получаем айдишники сторей созданых в течении 2.5 лет
         // из которых соберем статистику о сторях запущеных в разработку в этом году
+        const inDevDate = new Date(inDevDateStr);
+        const createDate = new Date(createDateStr);
         
-        // const currentDate = new Date(string);
-
-        // const oneAndHalfYearsAgo = new Date();
-        // oneAndHalfYearsAgo.setFullYear(currentDate.getFullYear() - 1);
-        // oneAndHalfYearsAgo.setMonth(currentDate.getMonth() - 6);
-
-        const currentDate = new Date('2023.12.01');
-
-        const oneAndHalfYearsAgo = new Date();
-        oneAndHalfYearsAgo.setMonth(currentDate.getMonth() - 1);
-        
-        const arrayStoryIds = await searchStoryIdsAfteDate(oneAndHalfYearsAgo);
+        const arrayStoryIds = await searchStoryIdsAfteDate(createDate);
         const rangeStart = arrayStoryIds[0];
         const rangeEnd = arrayStoryIds[arrayStoryIds.length-1];
         
@@ -639,7 +630,7 @@ async function collectStatsAfterDate(string) {
         ) {
             const {isSucces, data} = await step1(arrayStoryIds);
             const filteredData = data
-                .filter( stats => new Date(stats.first_move_to_in_development) - currentDate > 0);
+                .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
             
             const save = {
                     step: 1,
@@ -691,7 +682,7 @@ async function collectStatsAfterDate(string) {
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
         ) {
-            console.log('начинаем собирать данные');
+            console.log('начинаем сбор данных, это может занять какое то время');
             return await step2( exchangeBufferData.data, async ( isSucces, data ) => { 
                 const save = {
                     step: 2,
@@ -704,7 +695,6 @@ async function collectStatsAfterDate(string) {
                 
                 localStorage.setItem(LOCAL_STORAGE_KEY, text)
                 if (isSucces) {
-                    console.log('начинаем сбор данных, это может занять какое то время');
                     await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
                     saveInExchangeBuffer(text);
                     
@@ -721,5 +711,8 @@ async function collectStatsAfterDate(string) {
     }
 }
 
-await collectStatsAfterDate('2023.01.01');
+
+// стори попадает в статистику если она создана после первой даты
+// и была перемещена в разработку после второй даты
+await collectStatsAfterDate('2023.11.01', '2023.12.01');
 ```
