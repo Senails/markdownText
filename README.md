@@ -156,15 +156,15 @@ function createStoryStats(story, storyHistory) {
     stats.reviewer = getCustomFieldValue( story, 'Reviewer' ) || null;
     stats.qa = getCustomFieldValue( story, 'QA' ) || null;
 
-    stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || 0;
-    stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || 0;
-    stats.actual_review = parseInt(getCustomFieldValue( story, 'Actual review' )) || 0;
+    stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || null;
+    stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || null;
+    stats.actual_review = parseInt(getCustomFieldValue( story, 'Actual review' )) || null;
 
     stats.pulls_count = story.pull_requests.length;
     stats.pull_links = story.pull_requests.map( e => e.url );
 
-    stats.estimate_last_value = story.estimate || 0;
-    stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || 0;
+    stats.estimate_last_value = story.estimate || null;
+    stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || null;
 
     let estimateHistory = storyHistory
         .filter( e => e.actions && e.actions.length && e.actions
