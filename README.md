@@ -15,15 +15,11 @@ if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
 
 async function getHistoryByStoryID(id){
     let res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, FETCH_CONFIG);
-    let json = await res.json();
-    
-    return json;
+    return await res.json();
 }
 async function getStoryObjectByStoryId(id) {
     const res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}`, FETCH_CONFIG );
-    const storyObject = await res.json();
-    
-    return storyObject;
+    return await res.json();
 }
 
 const excludeEditorsList = [
@@ -36,17 +32,20 @@ function getSpandings(storyHistory, fieldNames) {
     let actualValue = 0;
     
     const changes = storyHistory
-        .filter( obj => obj.references)
+        .filter( o => o.references)
         .filter( obj => obj.references
             .find( elem => fieldNames.includes(elem.field_name)))
         .map ( obj => {
             const member = getMemberNameById(obj.member_id);
+            const references = obj.references
+                .filter( o => fieldNames.includes(o.field_name))
+            
             let countChanges;
                 
-            if (obj.references.length === 1) {
-                countChanges = parseInt(obj.references[0].string_value) - actualValue;
+            if (references.length === 1) {
+                countChanges = parseInt(references[0].string_value) - actualValue;
             } else {
-                countChanges = parseInt(obj.references[0].string_value) - parseInt(obj.references[1].string_value);
+                countChanges = parseInt(references[0].string_value) - parseInt(references[1].string_value);
             }
             
             actualValue += countChanges;
@@ -157,15 +156,15 @@ function createStoryStats(story, storyHistory) {
     stats.reviewer = getCustomFieldValue( story, 'Reviewer' ) || null;
     stats.qa = getCustomFieldValue( story, 'QA' ) || null;
 
-    stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || 0;
-    stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || 0;
-    stats.actual_review = parseInt(getCustomFieldValue( story, 'Actual review' )) || 0;
+    stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || null;
+    stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || null;
+    stats.actual_review = parseInt(getCustomFieldValue( story, 'Actual review' )) || null;
 
     stats.pulls_count = story.pull_requests.length;
     stats.pull_links = story.pull_requests.map( e => e.url );
 
-    stats.estimate_last_value = story.estimate || 0;
-    stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || 0;
+    stats.estimate_last_value = story.estimate || null;
+    stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || null;
 
     let estimateHistory = storyHistory
         .filter( e => e.actions && e.actions.length && e.actions
@@ -243,7 +242,6 @@ async function getStoryStatsById( storiId ) {
         const storyHistory = await getHistoryByStoryID(storiId);
         return createStoryStats(story, storyHistory);
     }
-    
     return;
 }
 
@@ -563,15 +561,13 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
         const createDate = new Date(createDateStr);
         
         const arrayStoryIds = await searchStoryIdsAfteDate(createDate);
-        const rangeStart = arrayStoryIds[0];
-        const rangeEnd = arrayStoryIds[arrayStoryIds.length-1];
+        const unicString = createDateStr+inDevDateStr;
         
         if (
             localStorageData
             && localStorageData.step === 3
             && localStorageData.isSucces
-            && localStorageData.rangeStart === rangeStart
-            && localStorageData.rangeEnd === rangeEnd
+            && localStorageData.unicString === unicString
         ) {
             const finalData = localStorageData.data;
             
@@ -589,16 +585,14 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && localStorageData.step === 1
             && exchangeBufferData.isSucces
             && localStorageData.isSucces
-            && exchangeBufferData.rangeStart === localStorageData.rangeStart
-            && exchangeBufferData.rangeEnd === localStorageData.rangeEnd
+            && exchangeBufferData.unicString === localStorageData.unicString
         ) {
             const finalData = step3(localStorageData.data, exchangeBufferData.data);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
                 step: 3,
                 isSucces: true,
                 data: finalData,
-                rangeStart: localStorageData.rangeStart,
-                rangeEnd: localStorageData.rangeEnd,
+                unicString: localStorageData.unicString,
             }))
             
             console.log('Данные сохранены в локальном хранилище');
@@ -613,15 +607,13 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && localStorageData
             && localStorageData.step === 1
             && localStorageData.isSucces
-            && localStorageData.rangeStart === rangeStart
-            && localStorageData.rangeEnd === rangeEnd
+            && localStorageData.unicString === unicString
         ) {
             const dataForBuffer = localStorageData;
             dataForBuffer.data = dataForBuffer.data.map( story => ({
                 story_id: story.story_id,
                 pulls: story.pulls
             }));
-
             
             saveInExchangeBuffer(JSON.stringify(dataForBuffer));
             console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
@@ -632,8 +624,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 
         if (
             !localStorageData
-            || localStorageData.rangeStart !== rangeStart
-            || localStorageData.rangeEnd !== rangeEnd
+            || localStorageData.unicString !== unicString
         ) {
             const {isSucces, data} = await step1(arrayStoryIds);
             const filteredData = data
@@ -643,8 +634,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
                     step: 1,
                     isSucces,
                     data: filteredData,
-                    rangeStart,
-                    rangeEnd,
+                    unicString,
                 }
 
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(save))
@@ -670,8 +660,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && exchangeBufferData
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
-            && exchangeBufferData.rangeStart === rangeStart
-            && exchangeBufferData.rangeEnd === rangeEnd
+            && exchangeBufferData.unicString === unicString
         ) {
             console.log('данные уже в буфере обмена')
         }
@@ -684,8 +673,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
             && localStorageData.isSucces
-            && exchangeBufferData.rangeStart === localStorageData.rangeStart
-            && exchangeBufferData.rangeEnd === localStorageData.rangeEnd
+            && exchangeBufferData.unicString === localStorageData.unicString
         ) {
             saveInExchangeBuffer(JSON.stringify(localStorageData));
             
@@ -706,8 +694,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
                     step: 2,
                     isSucces,
                     data,
-                    rangeStart: exchangeBufferData.rangeStart,
-                    rangeEnd: exchangeBufferData.rangeEnd,
+                    unicString: exchangeBufferData.unicString,
                 }
                 const text = JSON.stringify(save);
                 
@@ -734,4 +721,5 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 // и была перемещена в разработку после второй даты
 // await collectStatsAfterDate('2021.06.01', '2023.01.01');
 await collectStatsAfterDate('2023.11.01', '2023.12.01');
+
 ```
