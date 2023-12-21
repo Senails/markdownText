@@ -1,5 +1,5 @@
 ```js
-**const FETCH_CONFIG = {
+const FETCH_CONFIG = {
     headers:{
         "Tenant-Organization2": "5c916c11-d2f0-4c6b-aa34-be3b41942057",
         "Tenant-Workspace2": "5c9176af-ad29-45f1-94f0-7e5e1d9491c0",
@@ -543,7 +543,7 @@ async function step2(inputData, localStorageData) {
         }
         
     } catch(e) {
-        console.log(e);
+        console.error(e);
         return {
             isSucces: false,
             data: outputData,
