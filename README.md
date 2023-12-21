@@ -156,15 +156,15 @@ function createStoryStats(story, storyHistory) {
     stats.reviewer = getCustomFieldValue( story, 'Reviewer' ) || null;
     stats.qa = getCustomFieldValue( story, 'QA' ) || null;
 
-    stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || null;
-    stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || null;
-    stats.actual_review = parseInt(getCustomFieldValue( story, 'Actual review' )) || null;
+    stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || 0;
+    stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || 0;
+    stats.actual_review = parseInt(getCustomFieldValue( story, 'Actual review' )) || 0;
 
     stats.pulls_count = story.pull_requests.length;
     stats.pull_links = story.pull_requests.map( e => e.url );
 
-    stats.estimate_last_value = story.estimate || null;
-    stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || null;
+    stats.estimate_last_value = story.estimate || 0;
+    stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || 0;
 
     let estimateHistory = storyHistory
         .filter( e => e.actions && e.actions.length && e.actions
@@ -294,10 +294,20 @@ function findReviewerRejectCount( html ) {
 }
 
 // Поиск ревьюверов (github)
-function findReviewers( html ) {
+async function findReviewers( tex, pullUrl ) {
     const subst = '<a class="assignee Link--primary css-truncate-target width-fit" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self"';
-    const positions = findStringPositions( html, subst);
+    
+    let html = text;
+    let positions = findStringPositions( html, subst);
 
+    if (!positions.length) {
+        const html2 = await fetchHtml(`${pullUrl}/suggested-reviewers`);
+        if (html2 !== 'Not Found') {
+            html = html2;
+            positions = findStringPositions( html, subst);
+        }
+    }
+    
     if (positions.length) {
         return positions.map( index => {
             const textPart = html.substring(index, index + 400);
@@ -305,7 +315,7 @@ function findReviewers( html ) {
             const pattern = /<span class="css-truncate-target width-fit v-align-middle">(.*?)<\/span>/;
             return textPart.match(pattern)[1];
         });
-    }
+    } 
     return [];
 }
 
@@ -381,7 +391,9 @@ async function callectPullData( url ) {
     const pullPage = await fetchHtml(url)
 
     const ownerPromise = convertNicknameToFullName(findOwner(pullPage));
-    const reviewersPromise = Promise.all(findReviewers(pullPage).map( nick => convertNicknameToFullName(nick)));
+    const reviewersPromise = Promise
+        .all( await findReviewers(pullPage, url).then( reviewers => reviewers
+            .map( nick => convertNicknameToFullName(nick))));
 
     let htmls = [pullPage];
     let qa_rejected_count = 0;
