@@ -747,5 +747,5 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
 await collectStatsAfterDate('2021.06.01', '2023.01.01');
-// await collectStatsAfterDate('2023.11.01', '2023.12.01');
+// await collectStatsAfterDate('2023.11.01', '2023.12.01'); 
 ```
