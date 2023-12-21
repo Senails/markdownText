@@ -294,10 +294,10 @@ function findReviewerRejectCount( html ) {
 }
 
 // Поиск ревьюверов (github)
-async function findReviewers( tex, pullUrl ) {
+async function findReviewers( inputhtml, pullUrl ) {
     const subst = '<a class="assignee Link--primary css-truncate-target width-fit" data-octo-click="hovercard-link-click" data-octo-dimensions="link_type:self"';
     
-    let html = text;
+    let html = inputhtml;
     let positions = findStringPositions( html, subst);
 
     if (!positions.length) {
@@ -516,7 +516,7 @@ async function step1(storyIds) {
 }
 
 // Шаг2 сбор статистики с гитхаба (github)
-async function step2(inputData, saveData) {
+async function step2(inputData) {
     const outputData = [];
     let i = 1;
 
@@ -534,11 +534,17 @@ async function step2(inputData, saveData) {
             });
             console.log(`Собираем данные по пулам для каждой стори ${i++} / ${inputData.length} story_id = ${statsStory.story_id}`);
         }
-        
-        await saveData(true, outputData);
+
+        return {
+            isSucces: true,
+            data: outputData,
+        }
     } catch(e) {
-        console.log(e);
-        await saveData(false, outputData);
+        console.error(e);
+        return {
+            isSucces: false,
+            data: outputData,
+        }
     }
 }
 
@@ -587,7 +593,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             console.log(finalData);
 
             await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
-            await saveAsFile(finalData, 'stats');
+            return await saveAsFile(finalData, 'stats');
         }
 
         if (
@@ -611,7 +617,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             console.log(finalData);
 
             await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
-            await saveAsFile(finalData, 'stats');
+            return await saveAsFile(finalData, 'stats');
         }
         
         if (
@@ -628,10 +634,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             }));
             
             saveInExchangeBuffer(JSON.stringify(dataForBuffer));
-            console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище');
-            console.log('можно перейти на страницу гитхаба и запустить скрипт там');
-            console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
-            return;
+            return console.log('Можно перейти на страницу гитхаба и запустить скрипт там');
         } 
 
         if (
@@ -659,12 +662,11 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
                 await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
                 saveInExchangeBuffer(JSON.stringify(save));
                 
-                console.log('все хорошо, данные с шотката собраны, и сохранены в локальном хранилище, данные для сбора на гитхабе помещены в буфер обмена');
-                console.log('можно перейти на страницу гитхаба и запустить скрипт там, для продолжения сбора статистики');
-                console.log('https://github.com/Senails/markdownText/blob/full-stats-script/README.md');
+                console.log('Можно перейти на страницу гитхаба и запустить скрипт там, для продолжения сбора статистики');
             } else {
                 console.log('что то пошло не так');
             }
+            return;
         }
 
         if (
@@ -674,7 +676,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && exchangeBufferData.isSucces
             && exchangeBufferData.unicString === unicString
         ) {
-            console.log('данные уже в буфере обмена')
+            return console.log('Данные уже в буфере обмена')
         }
     }
 
@@ -689,9 +691,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
         ) {
             saveInExchangeBuffer(JSON.stringify(localStorageData));
             
-            console.log('данные с гитхаба сохранены в локальном хранилище и буфере обмена');
-            console.log('можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
-            console.log('https://app.shortcut.com/linkedhelper/story/17045/shortcut');
+            console.log('Можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
             return;
         } 
 
@@ -700,28 +700,27 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
         ) {
-            console.log('начинаем сбор данных, это может занять какое то время');
-            return await step2( exchangeBufferData.data, async ( isSucces, data ) => { 
-                const save = {
-                    step: 2,
-                    isSucces,
-                    data,
-                    unicString: exchangeBufferData.unicString,
-                }
-                const text = JSON.stringify(save);
+            console.log('Начинаем сбор данных, это может занять какое то время');
+            const { isSucces, data } =  await step2( exchangeBufferData.data);
+            
+            const save = {
+                step: 2,
+                isSucces,
+                data,
+                unicString: exchangeBufferData.unicString,
+            }
+            
+            const text = JSON.stringify(save);
+            localStorage.setItem(LOCAL_STORAGE_KEY, text)
+            if (isSucces) {
+                await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
+                saveInExchangeBuffer(text);
                 
-                localStorage.setItem(LOCAL_STORAGE_KEY, text)
-                if (isSucces) {
-                    await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
-                    saveInExchangeBuffer(text);
-                    
-                    console.log('данные с гитхаба сохранены в локальном хранилище и буфере обмена');
-                    console.log('можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
-                    console.log('https://app.shortcut.com/linkedhelper/story/17045/shortcut');
-                } else {
-                    console.log('что то пошло не так');
-                }
-            })
+                console.log('Можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
+            } else {
+                console.log('что то пошло не так');
+            }
+            return;
         }
 
         console.log('похоже в буфере обмена пусто, соберите сначало данные с шотката')
@@ -731,7 +730,8 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
-// await collectStatsAfterDate('2021.06.01', '2023.01.01');
-await collectStatsAfterDate('2023.11.01', '2023.12.01');
+await collectStatsAfterDate('2021.06.01', '2023.01.01');
+// await collectStatsAfterDate('2023.11.03', '2023.12.01');
+
 
 ```
