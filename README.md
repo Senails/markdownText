@@ -236,7 +236,7 @@ function createStoryStats(story, storyHistory) {
 }
 
 // функция для сбора статистики с стори по айди (shortcut)
-async function getStoryStatsById( storiId ) {
+async function getStoryStatsById( storiId ) {    
     const story = await getStoryObjectByStoryId(storiId);
     if (!(story.message && story.message === 'Resource not found.')) {
         const storyHistory = await getHistoryByStoryID(storiId);
@@ -493,12 +493,14 @@ async function saveAsFile( data, fileName) {
 }
 
 // Шаг1 сбор статистики с шотката (shortcut)
-async function step1(storyIds) {
+async function step1(storyIds, localStorageData) {
     const allStats = [];
 
     try {
         for(const id of storyIds) {
-            const storyStats = await getStoryStatsById(id);
+            const savedData = localStorageData && localStorageData.find( s => s.story_id === id);
+            const storyStats = savedData || await getStoryStatsById(id);
+            
             allStats.push(storyStats);
             console.log(`Сибираем статистику по сторям ${allStats.length} / ${storyIds.length} story_id = ${id}`);
         }
@@ -516,22 +518,22 @@ async function step1(storyIds) {
 }
 
 // Шаг2 сбор статистики с гитхаба (github)
-async function step2(inputData) {
+async function step2(inputData, localStorageData) {
     const outputData = [];
     let i = 1;
 
     try {
         for( const statsStory of inputData) {
-            outputData.push({
-                pulls: await Promise.all(statsStory.pulls.map( pull => {
-                    return new Promise( async (res) => {
-                        res({
-                            ...pull,
-                            ...(await callectPullData(pull.url))
-                        });
-                    })
-                }))
-            });
+            const savedData = localStorageData && localStorageData
+                .find( s => s.story_id === statsStory.story_id);
+            const storyStats = savedData || {
+                ...statsStory,
+                pulls: await Promise.all(statsStory.pulls
+                    .map( pull => callectPullData(pull.url)
+                        .then( data => ({ ...pull, ...data }))))
+            };
+            
+            outputData.push(storyStats);
             console.log(`Собираем данные по пулам для каждой стори ${i++} / ${inputData.length} story_id = ${statsStory.story_id}`);
         }
 
@@ -539,8 +541,9 @@ async function step2(inputData) {
             isSucces: true,
             data: outputData,
         }
+        
     } catch(e) {
-        console.error(e);
+        console.log(e);
         return {
             isSucces: false,
             data: outputData,
@@ -605,7 +608,10 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && localStorageData.isSucces
             && exchangeBufferData.unicString === localStorageData.unicString
         ) {
-            const finalData = step3(localStorageData.data, exchangeBufferData.data);
+            const localData = localStorageData.data
+                .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
+            const finalData = step3(localData, exchangeBufferData.data);
+           
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
                 step: 3,
                 isSucces: true,
@@ -639,32 +645,37 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 
         if (
             !localStorageData
+            || !localStorageData.isSucces
             || localStorageData.unicString !== unicString
         ) {
-            const {isSucces, data} = await step1(arrayStoryIds);
-            const filteredData = data
-                .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
+            const savedData = 
+                localStorageData 
+                && localStorageData.unicString === unicString
+                && localStorageData.data;
             
+            const {isSucces, data} = await step1(arrayStoryIds, savedData);
+
             const save = {
                     step: 1,
                     isSucces,
-                    data: filteredData,
+                    data,
                     unicString,
                 }
 
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(save))
+
             if (isSucces) {
-                save.data = save.data.map( story => ({
-                    story_id: story.story_id,
-                    pulls: story.pulls
-                }))
+                save.data = save.data
+                    .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
+                
+                save.data = save.data.map( ({story_id, pulls}) => ({story_id, pulls}));
 
                 await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
                 saveInExchangeBuffer(JSON.stringify(save));
-                
+
                 console.log('Можно перейти на страницу гитхаба и запустить скрипт там, для продолжения сбора статистики');
             } else {
-                console.log('что то пошло не так');
+                console.log('Что то пошло не так, если эта ошибка сети то при повторном запуске скрипт попробует продолжить, а не начинать с нуля');
             }
             return;
         }
@@ -700,8 +711,13 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && exchangeBufferData.step === 1
             && exchangeBufferData.isSucces
         ) {
+            const savedData = 
+                localStorageData 
+                && localStorageData.unicString === exchangeBufferData.unicString
+                && localStorageData.data;
+            
             console.log('Начинаем сбор данных, это может занять какое то время');
-            const { isSucces, data } =  await step2( exchangeBufferData.data);
+            const { isSucces, data } =  await step2( exchangeBufferData.data, savedData);
             
             const save = {
                 step: 2,
@@ -718,7 +734,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
                 
                 console.log('Можно вернуться в шоткат и обьеденить данные повторно запустив скрипт');
             } else {
-                console.log('что то пошло не так');
+                console.log('Что то пошло не так, если эта ошибка сети то при повторном запуске скрипт попробует продолжить, а не начинать с нуля');
             }
             return;
         }
@@ -731,7 +747,5 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
 await collectStatsAfterDate('2021.06.01', '2023.01.01');
-// await collectStatsAfterDate('2023.11.03', '2023.12.01');
-
-
+// await collectStatsAfterDate('2023.11.01', '2023.12.01');
 ```
