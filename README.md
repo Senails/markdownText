@@ -17,7 +17,7 @@ if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
     window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
 }
 
-Math.sum = (...numbers) => {
+const sum = (...numbers) => {
     return numbers.reduce((total, number) => total + number, 0);
 };
 const isObject = ( mayBeObject ) => {
@@ -601,7 +601,7 @@ function createCsvText( data ) {
     }
     function findDeepChildCount( obj, key) {
         return isObject(obj[key]) 
-            ? Math.sum( ...Object.keys(obj[key]).map( k => findDeepChildCount(obj[key], k)) )
+            ? sum( ...Object.keys(obj[key]).map( k => findDeepChildCount(obj[key], k)) )
             : 1 ;
     }
     function createHead( obj, key, parentName = '') {
@@ -751,7 +751,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             const finalData = step3Data.map( storyStats => ({
                     ...storyStats,
                     max_qa_rejected_count: Math.max( ...storyStats.pulls.map( pull => pull.qa_rejected_count), ...[0]),
-                    total_reviewer_rejected_count: Math.sum( ...storyStats.pulls.map( pull => pull.reviewer_rejected_count)),
+                    total_reviewer_rejected_count: sum( ...storyStats.pulls.map( pull => pull.reviewer_rejected_count)),
                 }));
            
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
