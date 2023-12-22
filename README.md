@@ -8,10 +8,18 @@ const FETCH_CONFIG = {
 };
 const LOCAL_STORAGE_KEY = 'collecting_statistics';
 
+const excludeEditorsList = [
+    'Alla Sitnikova',
+];
+
 if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
     window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
     window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
 }
+
+Math.sum = (...numbers) => {
+    return numbers.reduce((total, number) => total + number, 0);
+};
 
 async function getHistoryByStoryID(id){
     let res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, FETCH_CONFIG);
@@ -21,10 +29,6 @@ async function getStoryObjectByStoryId(id) {
     const res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}`, FETCH_CONFIG );
     return await res.json();
 }
-
-const excludeEditorsList = [
-    'Alla Sitnikova',
-];
 
 // функция для получения массива людей списывающих
 // определенные кастомные поля из истории (shortcut)
@@ -610,7 +614,12 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
         ) {
             const localData = localStorageData.data
                 .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
-            const finalData = step3(localData, exchangeBufferData.data);
+            const step3Data = step3(localData, exchangeBufferData.data);
+            const finalData = step3Data.map( storyStats => ({
+                    ...storyStats,
+                    max_qa_rejected_count: Math.max( ...storyStats.pulls.map( pull => pull.qa_rejected_count), ...[0]),
+                    total_reviewer_rejected_count: Math.sum( ...storyStats.pulls.map( pull => pull.reviewer_rejected_count)),
+                }));
            
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
                 step: 3,
@@ -746,6 +755,6 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
 
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
-await collectStatsAfterDate('2021.06.01', '2023.01.01');
-// await collectStatsAfterDate('2023.11.01', '2023.12.01');
+// await collectStatsAfterDate('2021.06.01', '2023.01.01');
+await collectStatsAfterDate('2023.11.01', '2023.12.01');
 ```
