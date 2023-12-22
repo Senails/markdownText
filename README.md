@@ -488,7 +488,7 @@ async function saveAsFile( data, fileName, fileFormat = 'csv') {
 
     const text = fileFormat === 'csv' 
         ? createCsvText(data) 
-        : JSON.stringify(obj, null, 4);
+        : JSON.stringify(obj, null, 2);
 
     const type = fileFormat === 'csv' 
         ? 'text/csv' 
@@ -582,33 +582,27 @@ function createCsvText( data ) {
     
     return `${head}\n\n${'value'}`;
 
-    function format( inputvalue ) {
-        const value = String(inputvalue).replaceAll('"','""');
-        return `"${value}"`
+    function format( inputValue ) {
+        const value = String(inputValue).replaceAll('"','""');
+        return `"${value}"`;
     }
     function getObjectStruct( data ) {
         const struct = {};
         
-        data.forEach( elem => {
-            const keys = Object.keys(elem);
-            keys.forEach( key => {
-                if (struct[key]) {
-                     return;
-                }
-                if (!isObject(elem[key])) {
-                    return struct[key] = true;
-                }
-                struct[key] = getObjectStruct(data.map( elem => elem[key]).filter( e => e))
-            })      
-        })
+        data.forEach( elem => Object.keys(elem)
+            .forEach( key => !struct[key] && 
+                (!isObject(elem[key]) 
+                ? struct[key] = true
+                : struct[key] = getObjectStruct(data.map( elem => elem[key]).filter( e => e)))
+            ) 
+        )
         
         return struct;
     }
     function findDeepChildCount( obj, key) {
-        if (isObject(obj[key])) {
-            return Math.sum( ...Object.keys(obj[key]).map( k => findDeepChildCount(obj[key], k)) );
-        }
-        return 1;
+        return isObject(obj[key]) 
+            ? Math.sum( ...Object.keys(obj[key]).map( k => findDeepChildCount(obj[key], k)) )
+            : 1 ;
     }
     function createHead( obj, key, parentName = '') {
         const formatKey = obj[0] ? format(`${parentName}[${ +key + 1}]`) : format(key);
