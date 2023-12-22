@@ -20,6 +20,9 @@ if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
 Math.sum = (...numbers) => {
     return numbers.reduce((total, number) => total + number, 0);
 };
+const isObject = ( mayBeObject ) => {
+    return typeof mayBeObject === 'object' && mayBeObject !== null;
+};
 
 async function getHistoryByStoryID(id){
     let res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, FETCH_CONFIG);
@@ -480,15 +483,19 @@ async function askExchangeBuffer(message) {
 }
 
 // сохраняем статистику в файл
-async function saveAsFile( data, fileName) {
+async function saveAsFile( data, fileName, fileFormat = 'csv') {
     const obj = { data };
 
-    const csvText = createCsvText(data);
-    // const jsonText = JSON.stringify(obj, null, 4);
+    const text = fileFormat === 'csv' 
+        ? createCsvText(data) 
+        : JSON.stringify(obj, null, 4);
+
+    const type = fileFormat === 'csv' 
+        ? 'text/csv' 
+        : 'application/json';
+
     
-    const blob = new Blob([csvText], { type: 'text/csv' });
-    // const blob = new Blob([jsonText], { type: 'application/json' });
-    
+    const blob = new Blob([text], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
 
@@ -502,74 +509,10 @@ async function saveAsFile( data, fileName) {
     URL.revokeObjectURL(url);
 }
 
-
-///////////////// csv
-function isObject(value) {
-    return typeof value === 'object' && value !== null;
-}
-
-function getHeadStruct( data ) {
-    const struct = {};
-
-    data.forEach( elem => {
-        const keys = Object.keys(elem);
-        keys.forEach( key => {
-            if (struct[key]) {
-                 return;
-            }
-            if (!isObject(elem[key])) {
-                return struct[key] = true;
-            }
-            struct[key] = getHeadStruct(data.map( elem => elem[key]).filter( e => e))
-        })      
-    })
-    
-    return struct;
-}
-
-function findAllChildCount( obj, key) {
-    if (isObject(obj[key])) {
-        return Math.sum( ...Object.keys(obj[key]).map( k => findAllChildCount(obj[key], k)) );
-    }
-    return 1;
-}
-
-function createHeadScvSrtuct( obj, key, parentName = '') {
-    const formatKey = obj[0] ? format(`${parentName}[${ +key + 1}]`) : format(key);
-    
-    if (!isObject(obj[key])) {
-        return [[formatKey]]
-    }
-    const childStructs = Object.keys(obj[key])
-        .map( k => createHeadScvSrtuct(obj[key], k, key))
-        .map( (arr, _, all) => {
-            const maxLenth = Math.max( ...all.map( e => e.length ) );
-            if (arr.length < maxLenth) {
-                const lengthArrays = arr[0].length;
-                arr.push( ...Array(maxLenth - arr.length).fill(arr[0]));
-            }
-            return arr;
-        });
-        
-    const mergedChildrens = childStructs[0]
-        .map((_, j) => {
-            const res = [];
-            childStructs.forEach((_,i) => res.push(...childStructs[i][j]))
-            return res;
-        })
- 
-    return [[formatKey, ...Array(findAllChildCount(obj, key) - 1).fill(formatKey)], ...mergedChildrens ];
-}
-
-function format( inputvalue ) {
-    const value = String(inputvalue).replaceAll('"','""');
-    return `"${value}"`
-}
-
-
 // формируем csv файл
 function createCsvText( data ) {
-    // const filtered = data.map(({
+    const objectStruct = getObjectStruct(data);
+    // const formed = data.map(({
     //     story_id,
     //     story_name,
     //     pulls
@@ -579,56 +522,50 @@ function createCsvText( data ) {
     //     pulls
     // }));
 
-    const filtered = data;
+    const formed = data;
 
-    const headStruct = getHeadStruct(data);
-
-    function getKeyValueForCsv( obj, key) {
-        const value = obj[key];
+    console.log(objectStruct);
+    
+    // function getKeyValueForCsv( obj, key) {
+    //     const value = obj[key];
         
-        if (isObject(value)) {
-            const keys = Object.keys(value);
-            const accum = [];
-            keys.forEach(key => accum.push( ...getKeyValueForCsv(value, key) ) );
-            return accum;
-        }
-        return [ format(value) ];
-    }
+    //     if (isObject(value)) {
+    //         const keys = Object.keys(value);
+    //         const accum = [];
+    //         keys.forEach(key => accum.push( ...getKeyValueForCsv(value, key) ) );
+    //         return accum;
+    //     }
+    //     return [ format(value) ];
+    // }
     
-    const tabs = Object.keys(filtered[0]).map( key => {
-        const head = createHeadScvSrtuct(headStruct, key);
+    // const tabs = Object.keys(formed[0]).map( key => {
+    //     const head = createScvHead(objectStruct, key);
 
-        console.log(head);
-        
-        return [head, [...data
-            .map( storystats => getKeyValueForCsv( storystats, key ) )]];
-    });
+    //     console.log(head);
+    //     return [head, [...data
+    //         .map( storystats => getKeyValueForCsv( storystats, key ) )]];
+    // });
 
+    // const ValueSructs = tabs
+    //     .map( t => t[1])
+    //     .map( collomnArraysValues => {
+    //         const maxlength = Math.max(...collomnArraysValues.map( a => a.length));
+    //         const res = collomnArraysValues.map( a => {
+    //             if (a.length < maxlength) {
+    //                 return [...a, ...Array(maxlength - a.length).fill('"none"')];
+    //             }
+    //             return a;
+    //         });
+    //         return res.map( e => e.join(','));
+    //     })
 
+    // const value = ValueSructs[0]
+    //     .map((_, j) => ValueSructs.map( (_, i) => ValueSructs[i][j]).join(','))
+    //     .join('\n');
     
-    
-    const ValueSructs = tabs
-        .map( t => t[1])
-        .map( collomnArraysValues => {
-            const maxlength = Math.max(...collomnArraysValues.map( a => a.length));
-            
-            const res = collomnArraysValues.map( a => {
-                if (a.length < maxlength) {
-                    return [...a, ...Array(maxlength - a.length).fill('"none"')];
-                }
-                return a;
-            });
-            return res.map( e => e.join(','));
-        })
 
-    const value = ValueSructs[0]
-        .map((_, j) => ValueSructs.map( (_, i) => ValueSructs[i][j]).join(','))
-        .join('\n');
-
-
-
-    const headColomns = tabs
-        .map( t => t[0])
+    const headStruct = Object
+        .keys(formed[0]).map( key => createHead(objectStruct, key))
         .map( (arr, _, all) => {
             const maxLenth = Math.max( ...all.map( e => e.length ) );
             if (arr.length < maxLenth) {
@@ -638,19 +575,65 @@ function createCsvText( data ) {
             return arr;
         })
     
-    const head = headColomns[0]
-        .map((_, j) => {
-            const res = [];
-            headColomns.forEach((_,i) => res.push(...headColomns[i][j]))
-            return res;
-        })
+    const head = headStruct[0]
+        .map((_, j) => [...headStruct.map((_,i) => headStruct[i][j])].flat())
         .map( a => a.join(','))
         .join('\n');
     
     return `${head}\n\n${'value'}`;
-}
 
-///////////////// csv
+    function format( inputvalue ) {
+        const value = String(inputvalue).replaceAll('"','""');
+        return `"${value}"`
+    }
+    function getObjectStruct( data ) {
+        const struct = {};
+        
+        data.forEach( elem => {
+            const keys = Object.keys(elem);
+            keys.forEach( key => {
+                if (struct[key]) {
+                     return;
+                }
+                if (!isObject(elem[key])) {
+                    return struct[key] = true;
+                }
+                struct[key] = getObjectStruct(data.map( elem => elem[key]).filter( e => e))
+            })      
+        })
+        
+        return struct;
+    }
+    function findDeepChildCount( obj, key) {
+        if (isObject(obj[key])) {
+            return Math.sum( ...Object.keys(obj[key]).map( k => findDeepChildCount(obj[key], k)) );
+        }
+        return 1;
+    }
+    function createHead( obj, key, parentName = '') {
+        const formatKey = obj[0] ? format(`${parentName}[${ +key + 1}]`) : format(key);
+        
+        if (!isObject(obj[key])) {
+            return [[formatKey]]
+        }
+
+        const childStructs = Object.keys(obj[key])
+            .map( k => createHead(obj[key], k, key))
+            .map( (arr, _, all) => {
+                const maxLenth = Math.max( ...all.map( e => e.length ) );
+                if (arr.length < maxLenth) {
+                    const lengthArrays = arr[0].length;
+                    arr.push( ...Array(maxLenth - arr.length).fill(arr[0]));
+                }
+                return arr;
+            });
+            
+        const mergedChildrens = childStructs[0]
+            .map((_, j) => [ ...childStructs.map((_,i) => childStructs[i][j])].flat() )
+     
+        return [[formatKey, ...Array(findDeepChildCount(obj, key) - 1).fill(formatKey)], ...mergedChildrens ];
+    }
+}
 
 // Шаг1 сбор статистики с шотката (shortcut)
 async function step1(storyIds, localStorageData) {
