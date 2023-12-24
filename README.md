@@ -494,7 +494,6 @@ async function saveAsFile( data, fileName, fileFormat = 'csv') {
         ? 'text/csv' 
         : 'application/json';
 
-    
     const blob = new Blob([text], { type });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -511,90 +510,45 @@ async function saveAsFile( data, fileName, fileFormat = 'csv') {
 
 // формируем csv файл
 function createCsvText( data ) {
-    const objectStruct = getObjectStruct(data);
-    // const formed = data.map(({
-    //     story_id,
-    //     story_name,
-    //     pulls
-    // }) => ({
-    //     story_id,
-    //     story_name,
-    //     pulls
-    // }));
-
     const formed = data;
-
-    console.log(objectStruct);
+    const objectStruct = getObjectStruct(formed);
     
-    // function getKeyValueForCsv( obj, key) {
-    //     const value = obj[key];
-        
-    //     if (isObject(value)) {
-    //         const keys = Object.keys(value);
-    //         const accum = [];
-    //         keys.forEach(key => accum.push( ...getKeyValueForCsv(value, key) ) );
-    //         return accum;
-    //     }
-    //     return [ format(value) ];
-    // }
-    
-    // const tabs = Object.keys(formed[0]).map( key => {
-    //     const head = createScvHead(objectStruct, key);
-
-    //     console.log(head);
-    //     return [head, [...data
-    //         .map( storystats => getKeyValueForCsv( storystats, key ) )]];
-    // });
-
-    // const ValueSructs = tabs
-    //     .map( t => t[1])
-    //     .map( collomnArraysValues => {
-    //         const maxlength = Math.max(...collomnArraysValues.map( a => a.length));
-    //         const res = collomnArraysValues.map( a => {
-    //             if (a.length < maxlength) {
-    //                 return [...a, ...Array(maxlength - a.length).fill('"none"')];
-    //             }
-    //             return a;
-    //         });
-    //         return res.map( e => e.join(','));
-    //     })
-
-    // const value = ValueSructs[0]
-    //     .map((_, j) => ValueSructs.map( (_, i) => ValueSructs[i][j]).join(','))
-    //     .join('\n');
-    
-
-    const headStruct = Object
-        .keys(formed[0]).map( key => createHead(objectStruct, key))
-        .map( (arr, _, all) => {
-            const maxLenth = Math.max( ...all.map( e => e.length ) );
-            if (arr.length < maxLenth) {
-                const lengthArrays = arr[0].length;
-                arr.push( ...Array(maxLenth - arr.length).fill(arr[0]));
-            }
-            return arr;
-        })
-    
-    const head = headStruct[0]
-        .map((_, j) => [...headStruct.map((_,i) => headStruct[i][j])].flat())
+    const head = createHead({key: objectStruct}, 'key')
+        .filter((_, i) => i)
         .map( a => a.join(','))
         .join('\n');
     
-    return `${head}\n\n${'value'}`;
+    const value = formed.map( obj => Object.keys(objectStruct)
+        .map( key => createValue(obj, objectStruct, key) ))
+        .map( a => a.flat())
+        .map( a => a.join(','))
+        .join('\n');
+    
+    return `${head}\n\n${value}`;
 
     function format( inputValue ) {
-        const value = String(inputValue).replaceAll('"','""');
-        return `"${value}"`;
+        const value = inputValue === null ? ''
+            : typeof inputValue === 'number' ? String(inputValue).replace('.',',')
+            : String(inputValue);
+        
+        return `"${value.replaceAll('"','""')}"`;
     }
     function getObjectStruct( data ) {
         const struct = {};
         
         data.forEach( elem => Object.keys(elem)
-            .forEach( key => !struct[key] && 
-                (!isObject(elem[key]) 
-                ? struct[key] = true
-                : struct[key] = getObjectStruct(data.map( elem => elem[key]).filter( e => e)))
-            ) 
+            .forEach( key => {
+                if (!struct[key]) {
+                    if ( !isObject(elem[key]) ) {
+                        return struct[key] = true;
+                    }
+                    
+                    const subStruct = getObjectStruct(data.map( elem => elem[key]).filter( e => e ));
+                    if (Object.keys(subStruct).length) {
+                        struct[key] = subStruct;
+                    }
+                }
+            }) 
         )
         
         return struct;
@@ -605,7 +559,7 @@ function createCsvText( data ) {
             : 1 ;
     }
     function createHead( obj, key, parentName = '') {
-        const formatKey = obj[0] ? format(`${parentName}[${ +key + 1}]`) : format(key);
+        const formatKey = obj[0] ? format(`${parentName}[${key}]`) : format(key);
         
         if (!isObject(obj[key])) {
             return [[formatKey]]
@@ -617,16 +571,28 @@ function createCsvText( data ) {
                 const maxLenth = Math.max( ...all.map( e => e.length ) );
                 if (arr.length < maxLenth) {
                     const lengthArrays = arr[0].length;
-                    arr.push( ...Array(maxLenth - arr.length).fill(arr[0]));
+                    arr.push( ...Array(maxLenth - arr.length).fill(arr[arr.length - 1]));
                 }
                 return arr;
             });
-            
-        const mergedChildrens = childStructs[0]
-            .map((_, j) => [ ...childStructs.map((_,i) => childStructs[i][j])].flat() )
-     
+        
+        const mergedChildrens = childStructs[0].map((_, j) => [ ...childStructs.map((_,i) => childStructs[i][j])].flat() )
+        
         return [[formatKey, ...Array(findDeepChildCount(obj, key) - 1).fill(formatKey)], ...mergedChildrens ];
     }
+    function createValue( obj, struct, key) {
+        if (isObject(struct[key])) {
+            const subObject = obj ? obj[key] : null;
+            const substruct = struct[key];
+
+            return Object.keys(substruct)
+                .map( key => createValue(subObject, substruct, key))
+                .flat();
+        }
+        
+        return (obj && obj[key] !== undefined) ? [format(obj[key])] : [format(``)] ;
+    }
+    
 }
 
 // Шаг1 сбор статистики с шотката (shortcut)
@@ -697,7 +663,7 @@ function step3(data1, data2) {
     return data1.map( (strory, i) => ({...strory, ...data2[i] }));
 }
 
-async function collectStatsAfterDate( createDateStr, inDevDateStr) {
+async function collectStatsAfterDate( createDateStr, inDevDateStr, fileFormat) {
     // получаем данные из хранилища и буфера обмена
     const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
     await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
@@ -727,13 +693,14 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             && localStorageData.isSucces
             && localStorageData.unicString === unicString
         ) {
-            const finalData = localStorageData.data.filter((_, i) => i< 6);
+            const finalData = localStorageData.data
+                // .filter((_, i) => i< 6);
             
             console.log('Данные сохранены в локальном хранилище');
             console.log(finalData);
 
             await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
-            return await saveAsFile(finalData, 'stats');
+            return await saveAsFile(finalData, 'stats', fileFormat);
         }
 
         if (
@@ -765,7 +732,7 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
             console.log(finalData);
 
             await askExchangeBuffer('Кликниете на странице, скрипт сохранит статистику как файл');
-            return await saveAsFile(finalData, 'stats');
+            return await saveAsFile(finalData, 'stats', fileFormat);
         }
         
         if (
@@ -885,9 +852,8 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr) {
     }
 }
 
-
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
-// await collectStatsAfterDate('2021.06.01', '2023.01.01');
-await collectStatsAfterDate('2023.11.01', '2023.12.01');
+await collectStatsAfterDate('2021.06.01', '2023.01.01', 'csv');
+// await collectStatsAfterDate('2023.09.01', '2023.11.01', 'csv');
 ```
