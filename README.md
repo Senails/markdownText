@@ -314,16 +314,23 @@ async function findReviewers( inputhtml, pullUrl ) {
             positions = findStringPositions( html, subst);
         }
     }
+
+    let result = []
     
     if (positions.length) {
-        return positions.map( index => {
+        result = positions.map( index => {
             const textPart = html.substring(index, index + 400);
             
             const pattern = /<span class="css-truncate-target width-fit v-align-middle">(.*?)<\/span>/;
             return textPart.match(pattern)[1];
         });
     } 
-    return [];
+
+    if (result.length) {
+        result = Array.from(new Set(result));
+    }
+    
+    return result;
 }
 
 // Поиск создателя пула (github)
