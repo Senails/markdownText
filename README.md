@@ -390,13 +390,45 @@ async function fetchNameByNickName(nickname) {
 
 // конвертация ников в имена
 const convertNicknameToFullName = (() => {
-    const dictionary = {};
+    const dictionary1 = {
+        ['erinsasha']: 'Alexander Erin',
+        ['sanperrier']: 'Vyacheslav Dorzhiev',
+        ['uioqouqwe']: 'Grigory Mizhidon',
+        ['qlba']: 'Sergey Kulakbuhov',
+        ['dariashade']: 'Daria Lipinskaia ',
+        ['antondl2']: 'Anton Leontyuk',
+        ['antondl3']: 'Nikolay Derkachev',
+        ['z1ne2wo']: 'Konstantin Solovev',
+        ['kallenju']: 'Zolotova Anne',
+        ['AtlantaTesla']: '',
+        ['vladimir-mikhno']: 'Vladimir Mikhno',
+        ['VladimirFyodorov']: 'Vladimir Fyodorov',
+        ['unM3RCURRRY']: 'Alexander Cherdak',
+        ['espeluznante']: 'Pavel',
+        ['prestonviewer']: 'Vladimir Rubanyuk',
+        ['lindon0390']: 'Timur Dondokov',
+        ['iaroslav-dz']: 'Iaroslav Dzhurov',
+        ['Frcjocker']: 'Erdem Nikolaev',
+        ['olganikvik']: 'Ольга Никончук',
+        ['niki4xxxxx']: 'Никита Былёв',
+        ['EllaBaldanova']: 'Elvira Baldanova',
+        ['lhadminonduty ']: 'Admin',
+        ['AlmadelX']: 'Matvey Alexeev',
+        ['kritma']: 'Vasily Sentyay',
+        ['DoraBudaeva']: 'Dolgora Budaeva',
+        ['Senails']: 'Kuzma Shevelev',
+    };
+    
+    const dictionary2 = {};
 
     return async( nickname ) => {
-        if (!dictionary[nickname]) {
-            dictionary[nickname] = await fetchNameByNickName(nickname);
+        if (dictionary1[nickname]) {
+            return dictionary1[nickname];
         }
-        return dictionary[nickname];
+        if (!dictionary2[nickname]) {
+            dictionary2[nickname] = await fetchNameByNickName(nickname);
+        }
+        return dictionary2[nickname];
     }
 })();
 
@@ -494,7 +526,7 @@ async function saveAsFile( data, fileName, fileFormat = 'csv') {
     const obj = { data };
 
     const text = fileFormat === 'csv' 
-        ? createCsvText(data) 
+        ? createCsvText(splitObjects(data))
         : JSON.stringify(obj, null, 2);
 
     const type = fileFormat === 'csv' 
@@ -515,23 +547,86 @@ async function saveAsFile( data, fileName, fileFormat = 'csv') {
     URL.revokeObjectURL(url);
 }
 
+// раскладываем вложеный обьект на много плоских
+function splitObjects( objects ) {
+    return objects
+        .map( joinPrimitiveValues )
+        .map( convert )
+        .flat();
+    
+    function joinPrimitiveValues( obj ) {
+        Object.keys(obj).forEach( key => {
+            if ( Array.isArray(obj[key]) && obj[key].length) {
+                const array = obj[key];
+                if (isObject(array[0])) {
+                    obj[key] = array.map(joinPrimitiveValues);
+                } else {
+                    obj[key] = array.map(v => String(v)).join(', ');
+                }
+                return;
+            }
+            
+            if ( !Array.isArray(obj[key]) && isObject(obj[key])) {
+                obj[key] = joinPrimitiveValues(obj[key]);
+            }
+        })
+
+        return obj;
+    }
+    function convert( obj ) {
+        Object.keys(obj).forEach( key => {
+            if ( Array.isArray(obj[key]) ) {
+                return obj[key] = obj[key].map(convert).flat();
+            }
+            if ( isObject(obj[key]) ) {
+                return obj[key] = convert(obj[key]);
+            }
+        })
+      
+        let objects = [obj];
+        
+        Object.keys(obj)
+            .filter( k => Array.isArray(obj[k]) && obj[k].length )
+            .forEach( key => {
+                objects = objects.map( o => o[key]
+                    .map( arrElem => ({...o, [key]: arrElem}) ) 
+                ).flat();
+            });
+        
+        return objects.map( obj => {
+            const newObject = {};
+
+            Object.keys(obj).forEach( key => {
+                if (isObject(obj[key])) {
+                    const subObj = obj[key];
+                    return Object.keys(subObj).forEach( k => {
+                        newObject[`${key}_${k}`] = subObj[k];
+                    })
+                }
+                newObject[key] = obj[key];
+            })
+
+            return newObject;
+        })
+    }
+}
+
 // формируем csv файл
-function createCsvText( data ) {
-    const formed = data;
-    const objectStruct = getObjectStruct(formed);
+function createCsvText( data, isNeedHead = true ) {
+    const objectStruct = getObjectStruct(data);
     
     const head = createHead({key: objectStruct}, 'key')
         .filter((_, i) => i)
         .map( a => a.join(','))
         .join('\n');
     
-    const value = formed.map( obj => Object.keys(objectStruct)
+    const value = data.map( obj => Object.keys(objectStruct)
         .map( key => createValue(obj, objectStruct, key) ))
         .map( a => a.flat())
         .map( a => a.join(','))
         .join('\n');
     
-    return `${head}\n\n${value}`;
+    return `${ isNeedHead ? `${head}\n`: '' }${value}`;
 
     function format( inputValue ) {
         const value = inputValue === null ? ''
@@ -599,7 +694,6 @@ function createCsvText( data ) {
         
         return (obj && obj[key] !== undefined) ? [format(obj[key])] : [format(``)] ;
     }
-    
 }
 
 // Шаг1 сбор статистики с шотката (shortcut)
@@ -861,6 +955,6 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr, fileFormat) {
 
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
-await collectStatsAfterDate('2021.06.01', '2023.01.01', 'csv');
+await collectStatsAfterDate('2021.06.02', '2023.01.01', 'csv');
 // await collectStatsAfterDate('2023.09.01', '2023.11.01', 'csv');
 ```
