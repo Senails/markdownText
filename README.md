@@ -615,7 +615,7 @@ function splitObjects( objects ) {
 function createCsvText( data, isNeedHead = true ) {
     const objectStruct = getObjectStruct(data);
     
-    const head = createHead({key: objectStruct}, 'key')
+    const head = createHead({head: objectStruct}, 'head')
         .filter((_, i) => i)
         .map( a => a.join(','))
         .join('\n');
