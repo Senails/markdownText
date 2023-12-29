@@ -173,13 +173,5 @@ ON review_spandings_table.developer == owner
 
 ### QA
 ```sql
-SELECT developer, COUNT(story_id) AS completed_story_count
-FROM(
-    SELECT DISTINCT 
-    story_id,
-    IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer
-    FROM stats
-    WHERE state=="Completed"
-)
-GROUP BY developer
+
 ```
