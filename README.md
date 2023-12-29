@@ -47,16 +47,19 @@ GROUP BY owner
 6. Кол-во итераций ревью - среднее значение кол-ва переносов стори в статус Ready for review / кол-ва запросов изменений в пулле от ревьюеров.
 ```sql
 SELECT 
+	owner,
     AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
     AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
 FROM (
     SELECT 
-        story_id,
+		story_id,
+		owner,
         SUM(pulls_qa_rejected_count) AS pulls_qa_rejected_count,
         SUM(pulls_reviewer_rejected_count) AS pulls_reviewer_rejected_count
     FROM (
         SELECT DISTINCT
             story_id,
+			owner,
             pulls_repository,
             pulls_pull_id,
             pulls_qa_rejected_count,
@@ -65,6 +68,7 @@ FROM (
     )
     GROUP BY story_id
 )
+GROUP BY owner
 ```
 
 7. Трудозатраты на тестирование относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
