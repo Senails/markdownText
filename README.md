@@ -1,119 +1,137 @@
 
 1. Общее кол-во задач - Кол-во стори, которые хоть раз переводились в статус In dev + в поле Owner хоть раз стоял разработчик Х.
 ```sql
-    SELECT developer, COUNT(story_id) AS all_story_count
-    FROM(
-    	SELECT DISTINCT 
-    	story_id,
-    	IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer 
-    	FROM stats
-    	WHERE state_changes_to_in_development > 0
-    )
-    GROUP BY developer
+SELECT developer, COUNT(story_id) AS all_story_count
+FROM(
+    SELECT DISTINCT 
+    story_id,
+    IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer 
+    FROM stats
+    WHERE state_changes_to_in_development > 0
+)
+GROUP BY developer
 ```
 
 2. Кол-во выполненных задач - сумма всех стори, которые находятся в статусе Completed + в поле Owner хоть раз стоял разработчик Х.
 ```sql
-    SELECT developer, COUNT(story_id) AS story_count
-    FROM(
-    	SELECT DISTINCT 
-    	story_id,
-    	IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer
-    	FROM stats
-    	WHERE state=="Completed"
-    )
-    GROUP BY developer
+SELECT developer, COUNT(story_id) AS story_count
+FROM(
+    SELECT DISTINCT 
+    story_id,
+    IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer
+    FROM stats
+    WHERE state=="Completed"
+)
+GROUP BY developer
 ```
 
 3. Отклонения первичной оценки трудозатрат от фактических трудозатрат - среднее значение по всем стори разницы между первично выставленным значением в поле Estimate и последним выставленным значением в поле Actual dev.
 4. Отклонения вторичной оценки трудозатрат от фактических трудозатрат - среднее значение по всем стори разницы между вторым выставленным значением в поле Estimate и последним выставленным значением в поле Actual dev.
 ```sql
-    SELECT 
-    	AVG( first_estimate_delta ) avg_first_estimate_delta,
-    	AVG( second_estimate_delta )avg_second_estimate_delta
-    FROM ( -- большой разброс в значений
-    	SELECT DISTINCT
-    		story_id,
-    		(estimate_first_value - actual_dev) as first_estimate_delta,
-    		(estimate_second_value - actual_dev) as second_estimate_delta
-    	FROM stats
-    )
+SELECT 
+    AVG( first_estimate_delta ) avg_first_estimate_delta,
+    AVG( second_estimate_delta )avg_second_estimate_delta
+FROM ( -- большой разброс в значений
+    SELECT DISTINCT
+        story_id,
+        (estimate_first_value - actual_dev) as first_estimate_delta,
+        (estimate_second_value - actual_dev) as second_estimate_delta
+    FROM stats
+)
 ```
 
 5. Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
 6. Кол-во итераций ревью - среднее значение кол-ва переносов стори в статус Ready for review / кол-ва запросов изменений в пулле от ревьюеров.
 ```sql
+SELECT 
+    AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
+    AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
+FROM (
     SELECT 
-    	AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
-    	AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
+        story_id,
+        SUM(pulls_qa_rejected_count) AS pulls_qa_rejected_count,
+        SUM(pulls_reviewer_rejected_count) AS pulls_reviewer_rejected_count
     FROM (
-    	SELECT 
-    		story_id,
-    		SUM(pulls_qa_rejected_count) AS pulls_qa_rejected_count,
-    		SUM(pulls_reviewer_rejected_count) AS pulls_reviewer_rejected_count
-    	FROM (
-    		SELECT DISTINCT
-    			story_id,
-    			pulls_repository,
-    			pulls_pull_id,
-    			pulls_qa_rejected_count,
-    			pulls_reviewer_rejected_count
-    		FROM stats
-    	)
-    	GROUP BY story_id
+        SELECT DISTINCT
+            story_id,
+            pulls_repository,
+            pulls_pull_id,
+            pulls_qa_rejected_count,
+            pulls_reviewer_rejected_count
+        FROM stats
     )
+    GROUP BY story_id
+)
 ```
 
 7. Трудозатраты на тестирование относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
 8. Трудозатраты на ревью относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual review к значениям поля Actual dev.
 ```sql
+SELECT 
+    AVG(qa_part) AS avg_qa_part,
+    AVG(review_part) AS avg_review_part
+FROM (
     SELECT 
-    	AVG(qa_part) AS avg_qa_part,
-    	AVG(review_part) AS avg_review_part
+        story_id,
+        IIF(actual_qa>actual_dev, 1 , 
+            IIF(actual_qa == 0, 0, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))
+        ) as qa_part,
+        IIF(actual_review>actual_dev, 1 , 
+            IIF(actual_review == 0, 0, CAST(actual_review AS REAL) / CAST(actual_dev AS REAL))
+        ) as review_part
     FROM (
-    	SELECT 
-    		story_id,
-    		IIF(actual_qa>actual_dev, 1 , 
-    			IIF(actual_qa == 0, 0, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))
-    		) as qa_part,
-    		IIF(actual_review>actual_dev, 1 , 
-    			IIF(actual_review == 0, 0, CAST(actual_review AS REAL) / CAST(actual_dev AS REAL))
-    		) as review_part
-    	FROM (
-    		SELECT DISTINCT
-    			story_id,
-    			actual_dev - 0 as actual_dev,
-    			actual_qa - 0 as actual_qa,
-    			actual_review - 0 as actual_review
-    		FROM stats
-    	)
+        SELECT DISTINCT
+            story_id,
+            actual_dev - 0 as actual_dev,
+            actual_qa - 0 as actual_qa,
+            actual_review - 0 as actual_review
+        FROM stats
     )
+)
 ```
 
 9. Срок выполнения задач - среднее значение кол-ва дней между первым переносом задачи в In dev и переносом задачи в Completed.
 ```sql
-    SELECT 
-    	AVG(story_completed_at - first_move_to_in_development) avg_time_in_dev
-    FROM (
-    	SELECT DISTINCT
-    		story_id,
-    		JULIANDAY(first_move_to_in_development) as first_move_to_in_development,
-    		JULIANDAY(IIF( story_completed_at=="", datetime('now'), story_completed_at)) as story_completed_at
-    	FROM stats
-    )
+SELECT 
+    AVG(story_completed_at - first_move_to_in_development) avg_time_in_dev
+FROM (
+    SELECT DISTINCT
+        story_id,
+        JULIANDAY(first_move_to_in_development) as first_move_to_in_development,
+        JULIANDAY(IIF( story_completed_at=="", datetime('now'), story_completed_at)) as story_completed_at
+    FROM stats
+)
 ```
 
 10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
 ```sql
-    SELECT 
-    	actual_review_spendings_member,
-    	COUNT(story_id)
-    FROM (
-    	SELECT DISTINCT
-    		story_id,
-    		actual_review_spendings_member
-    	FROM stats
-    	WHERE actual_review_spendings_member != ""
-    )
-    GROUP BY actual_review_spendings_member
+SELECT 
+    actual_review_spendings_member,
+    COUNT(story_id)
+FROM (
+    SELECT DISTINCT
+        story_id,
+        actual_review_spendings_member
+    FROM stats
+    WHERE actual_review_spendings_member != ""
+)
+GROUP BY actual_review_spendings_member
 ```
+
+11. Срок ожидания ревью в очереди - среднее значение кол-ва дней, которое стори находится в статусе Ready for review + в поле Reviewer выставлен разработчик Х.
+```
+SELECT 
+	reviewer,
+	AVG(total_days_ready_for_review) as avg_waiting_review
+FROM (
+	SELECT DISTINCT
+		story_id,
+		total_days_ready_for_review,
+		reviewer
+	FROM stats
+	WHERE reviewer != ""
+)
+GROUP BY reviewer
+```
+
+12. Трудозатраты на ревью - среднее значение списаний разработчика Х в поле Acrual review.
