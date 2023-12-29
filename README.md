@@ -172,7 +172,6 @@ SELECT
 FROM (
 	SELECT DISTINCT
 		story_id,
-		first_move_to_in_development,
 		actual_qa_spendings_member
 	FROM stats
 	WHERE actual_qa_spendings_member != "" AND state_changes_to_in_development > 0
