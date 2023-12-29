@@ -89,3 +89,16 @@
     	)
     )
 ```
+
+9.
+```
+    SELECT 
+    	AVG(story_completed_at - first_move_to_in_development) avg_time_in_dev
+    FROM (
+    	SELECT DISTINCT
+    		story_id,
+    		JULIANDAY(first_move_to_in_development) as first_move_to_in_development,
+    		JULIANDAY(IIF( story_completed_at=="", datetime('now'), story_completed_at)) as story_completed_at
+    	FROM stats
+    )
+```
