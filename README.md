@@ -104,14 +104,16 @@ GROUP BY owner
 9. Срок выполнения задач - среднее значение кол-ва дней между первым переносом задачи в In dev и переносом задачи в Completed.
 ```sql
 SELECT 
-    AVG(story_completed_at - first_move_to_in_development) avg_time_in_dev
+    actual_review_spendings_member as developer,
+    COUNT(story_id) as reviewed_story_count
 FROM (
     SELECT DISTINCT
         story_id,
-        JULIANDAY(first_move_to_in_development) as first_move_to_in_development,
-        JULIANDAY(IIF( story_completed_at=="", datetime('now'), story_completed_at)) as story_completed_at
+        actual_review_spendings_member
     FROM stats
+    WHERE actual_review_spendings_member != ""
 )
+GROUP BY actual_review_spendings_member
 ```
 
 10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
