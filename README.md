@@ -91,7 +91,7 @@
 ```
 
 9.
-```
+```sql
     SELECT 
     	AVG(story_completed_at - first_move_to_in_development) avg_time_in_dev
     FROM (
@@ -101,4 +101,19 @@
     		JULIANDAY(IIF( story_completed_at=="", datetime('now'), story_completed_at)) as story_completed_at
     	FROM stats
     )
+```
+
+10.
+```sql
+    SELECT 
+    	actual_review_spendings_member,
+    	COUNT(story_id)
+    FROM (
+    	SELECT DISTINCT
+    		story_id,
+    		actual_review_spendings_member
+    	FROM stats
+    	WHERE actual_review_spendings_member != ""
+    )
+    GROUP BY actual_review_spendings_member
 ```
