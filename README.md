@@ -32,12 +32,12 @@ SELECT
 	owner as developer,
 	avg( first_estimate_delta ) avg_first_estimate_deviation,
 	avg( second_estimate_delta )avg_second_estimate_deviation
-FROM (
+FROM ( -- большой разброс в значений
     SELECT DISTINCT
         story_id,
 	owner,
-        (estimate_first_value - actual_dev) as first_estimate_delta,
-        (estimate_second_value - actual_dev) as second_estimate_delta
+        (actual_dev - estimate_first_value) as first_estimate_delta,
+        (actual_dev - estimate_second_value) as second_estimate_delta
     FROM stats
 )
 GROUP BY owner
