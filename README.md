@@ -34,10 +34,10 @@ SELECT
 	avg( second_estimate_delta )avg_second_estimate_deviation
 FROM ( -- большой разброс в значений
     SELECT DISTINCT
-        story_id,
+	story_id,
 	owner,
-        (actual_dev - estimate_first_value) as first_estimate_delta,
-        (actual_dev - estimate_second_value) as second_estimate_delta
+	(actual_dev - estimate_first_value) as first_estimate_delta,
+	(actual_dev - estimate_second_value) as second_estimate_delta
     FROM stats
 )
 GROUP BY owner
