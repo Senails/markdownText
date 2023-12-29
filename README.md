@@ -29,7 +29,7 @@ GROUP BY developer
 4. Отклонения вторичной оценки трудозатрат от фактических трудозатрат - среднее значение по всем стори разницы между вторым выставленным значением в поле Estimate и последним выставленным значением в поле Actual dev.
 ```sql
 SELECT 
-	owner,
+	owner as developer,
     AVG( first_estimate_delta ) avg_first_estimate_deviation,
     AVG( second_estimate_delta )avg_second_estimate_deviation
 FROM ( -- большой разброс в значений
@@ -47,7 +47,7 @@ GROUP BY owner
 6. Кол-во итераций ревью - среднее значение кол-ва переносов стори в статус Ready for review / кол-ва запросов изменений в пулле от ревьюеров.
 ```sql
 SELECT  
-	owner,
+	owner as developer,
 	AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
 	AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
 FROM (
