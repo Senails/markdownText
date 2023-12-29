@@ -184,27 +184,19 @@ GROUP BY qa
 
 3. QA Трудозатраты на тестирование относительно трудозатрат на разработку -  среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
 ```sql
-SELECT 
-    AVG(qa_part) AS avg_qa_part,
-    AVG(review_part) AS avg_review_part
+SELECT
+	qa,
+	AVG(IIF(actual_dev == 0, 1, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))) as avg_qa_part
 FROM (
-    SELECT 
-        story_id,
-        IIF(actual_qa>actual_dev, 1 , 
-            IIF(actual_qa == 0, 0, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))
-        ) as qa_part,
-        IIF(actual_review>actual_dev, 1 , 
-            IIF(actual_review == 0, 0, CAST(actual_review AS REAL) / CAST(actual_dev AS REAL))
-        ) as review_part
-    FROM (
-        SELECT DISTINCT
-            story_id,
-            actual_dev - 0 as actual_dev,
-            actual_qa - 0 as actual_qa,
-            actual_review - 0 as actual_review
-        FROM stats
-    )
+	SELECT DISTINCT
+		story_id,
+		qa,
+		actual_qa - 0 as actual_qa,
+		actual_dev - 0 as actual_dev
+	FROM stats
+	WHERE qa != "" AND actual_qa > 0
 )
+GROUP BY qa
 ```
 
 4. QA Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
