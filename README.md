@@ -104,21 +104,6 @@ GROUP BY owner
 9. Срок выполнения задач - среднее значение кол-ва дней между первым переносом задачи в In dev и переносом задачи в Completed.
 ```sql
 SELECT 
-    actual_review_spendings_member as developer,
-    COUNT(story_id) as reviewed_story_count
-FROM (
-    SELECT DISTINCT
-        story_id,
-        actual_review_spendings_member
-    FROM stats
-    WHERE actual_review_spendings_member != ""
-)
-GROUP BY actual_review_spendings_member
-```
-
-10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
-```sql
-SELECT 
 	owner as developer,
 	avg(time_on_story) as avg_time_on_story
 FROM (
@@ -130,6 +115,21 @@ FROM (
 	WHERE owner != ""
 )
 GROUP BY owner
+```
+
+10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
+```sql
+SELECT 
+    actual_review_spendings_member as developer,
+    COUNT(story_id) as reviewed_story_count
+FROM (
+    SELECT DISTINCT
+        story_id,
+        actual_review_spendings_member
+    FROM stats
+    WHERE actual_review_spendings_member != ""
+)
+GROUP BY actual_review_spendings_member
 ```
 
 11. Срок ожидания ревью в очереди - среднее значение кол-ва дней, которое стори находится в статусе Ready for review + в поле Reviewer выставлен разработчик Х.
