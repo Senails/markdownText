@@ -173,5 +173,80 @@ ON review_spandings_table.developer == owner
 
 ### QA
 ```sql
-
+SELECT DISTINCT
+	qa,
+	count_table.story_count,
+	deviation_table.avg_deviation,
+	qa_part_table.avg_qa_part,
+	reject_table.avg_pulls_qa_rejected_count
+FROM stats
+LEFT JOIN(
+	SELECT 
+		actual_qa_spendings_member,
+		COUNT(story_id) as story_count
+	FROM (
+		SELECT DISTINCT
+			story_id,
+			first_move_to_in_development,
+			actual_qa_spendings_member
+		FROM stats
+		WHERE actual_qa_spendings_member != "" AND state_changes_to_in_development > 0
+	)
+	GROUP BY actual_qa_spendings_member
+) as count_table
+ON count_table.actual_qa_spendings_member == qa
+LEFT JOIN(
+	SELECT 
+		qa as tester,
+		AVG(deviation) as avg_deviation
+	FROM (
+		SELECT DISTINCT
+			story_id,
+			qa,
+			actual_qa - estimate_qa as deviation
+		FROM stats
+		WHERE qa != "" AND actual_qa > 0
+	)
+	GROUP BY qa
+) as deviation_table
+ON deviation_table.tester == qa
+LEFT JOIN(
+	SELECT
+		qa as tester,
+		AVG(IIF(actual_dev == 0, 1, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))) as avg_qa_part
+	FROM (
+		SELECT DISTINCT
+			story_id,
+			qa,
+			actual_qa - 0 as actual_qa,
+			actual_dev - 0 as actual_dev
+		FROM stats
+		WHERE qa != "" AND actual_qa > 0
+	)
+	GROUP BY qa
+) as qa_part_table
+ON qa_part_table.tester == qa
+LEFT JOIN(
+	SELECT 
+		qa as tester,
+		AVG(pulls_qa_rejected_count) as avg_pulls_qa_rejected_count
+	FROM (
+		SELECT 
+			story_id,
+			qa,
+			SUM(pulls_qa_rejected_count) as pulls_qa_rejected_count
+		FROM (
+			SELECT DISTINCT
+				story_id,
+				qa,
+				pulls_qa_rejected_count - 0 as pulls_qa_rejected_count
+			FROM stats
+			WHERE qa != ""
+		)
+		GROUP BY story_id
+	)
+	GROUP BY qa
+) as reject_table
+ON reject_table.tester == qa
+WHERE qa != ""
 ```
