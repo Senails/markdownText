@@ -30,8 +30,8 @@ GROUP BY developer
 ```sql
 SELECT 
 	owner as developer,
-    AVG( first_estimate_delta ) avg_first_estimate_deviation,
-    AVG( second_estimate_delta )avg_second_estimate_deviation
+	avg( first_estimate_delta ) avg_first_estimate_deviation,
+	avg( second_estimate_delta )avg_second_estimate_deviation
 FROM ( -- большой разброс в значений
     SELECT DISTINCT
         story_id,
@@ -74,13 +74,13 @@ GROUP BY owner
 7. Трудозатраты на тестирование относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
 8. Трудозатраты на ревью относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual review к значениям поля Actual dev.
 ```sql
-SELECT 
+SELECT   
 	owner as developer,
-    AVG(qa_part) AS avg_qa_part,
-    AVG(review_part) AS avg_review_part
+	AVG(qa_part) AS avg_qa_part,
+	AVG(review_part) AS avg_review_part
 FROM (
     SELECT 
-		owner,
+	owner,
         story_id,
         IIF(actual_qa>actual_dev, 1 , 
             IIF(actual_qa == 0, 0, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))
@@ -90,11 +90,11 @@ FROM (
         ) as review_part
     FROM (
         SELECT DISTINCT
-			owner,
-            story_id,
-            actual_dev - 0 as actual_dev,
-            actual_qa - 0 as actual_qa,
-            actual_review - 0 as actual_review
+		owner,
+		story_id,
+		actual_dev - 0 as actual_dev,
+		actual_qa - 0 as actual_qa,
+		actual_review - 0 as actual_review
         FROM stats
     )
 )
