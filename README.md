@@ -119,7 +119,7 @@ GROUP BY actual_review_spendings_member
 ```
 
 11. Срок ожидания ревью в очереди - среднее значение кол-ва дней, которое стори находится в статусе Ready for review + в поле Reviewer выставлен разработчик Х.
-```
+```sql
 SELECT 
 	reviewer as developer,
 	AVG(total_days_ready_for_review) as avg_waiting_review
@@ -135,3 +135,17 @@ GROUP BY reviewer
 ```
 
 12. Трудозатраты на ревью - среднее значение списаний разработчика Х в поле Acrual review.
+```sql
+SELECT 
+	actual_review_spendings_member as developer,
+	AVG(actual_review_spendings_total_hours) avg_spandings_for_review
+FROM (
+	SELECT DISTINCT
+		story_id,
+		actual_review_spendings_member,
+		actual_review_spendings_total_hours
+	FROM stats
+	WHERE actual_review_spendings_member != ""
+)
+GROUP BY actual_review_spendings_member
+```
