@@ -182,7 +182,7 @@ SELECT DISTINCT
 FROM stats
 LEFT JOIN(
 	SELECT 
-		actual_qa_spendings_member,
+		actual_qa_spendings_member as tester,
 		COUNT(story_id) as story_count
 	FROM (
 		SELECT DISTINCT
@@ -193,7 +193,7 @@ LEFT JOIN(
 	)
 	GROUP BY actual_qa_spendings_member
 ) as count_table
-ON count_table.actual_qa_spendings_member == qa
+ON count_table.tester == qa
 LEFT JOIN(
 	SELECT 
 		qa as tester,
