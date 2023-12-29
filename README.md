@@ -32,7 +32,7 @@ SELECT
 	owner as developer,
 	avg( first_estimate_delta ) avg_first_estimate_deviation,
 	avg( second_estimate_delta )avg_second_estimate_deviation
-FROM ( -- большой разброс в значений
+FROM (
     SELECT DISTINCT
         story_id,
 	owner,
