@@ -35,7 +35,7 @@ SELECT
 FROM ( -- большой разброс в значений
     SELECT DISTINCT
         story_id,
-		owner,
+	owner,
         (estimate_first_value - actual_dev) as first_estimate_delta,
         (estimate_second_value - actual_dev) as second_estimate_delta
     FROM stats
@@ -46,24 +46,24 @@ GROUP BY owner
 5. Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
 6. Кол-во итераций ревью - среднее значение кол-ва переносов стори в статус Ready for review / кол-ва запросов изменений в пулле от ревьюеров.
 ```sql
-SELECT 
+SELECT  
 	owner,
-    AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
-    AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
+	AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
+	AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
 FROM (
     SELECT 
-		story_id,
-		owner,
+	story_id,
+	owner,
         SUM(pulls_qa_rejected_count) AS pulls_qa_rejected_count,
         SUM(pulls_reviewer_rejected_count) AS pulls_reviewer_rejected_count
     FROM (
         SELECT DISTINCT
-            story_id,
-			owner,
-            pulls_repository,
-            pulls_pull_id,
-            pulls_qa_rejected_count,
-            pulls_reviewer_rejected_count
+		story_id, 
+		owner,
+		pulls_repository,
+		pulls_pull_id,
+		pulls_qa_rejected_count,
+		pulls_reviewer_rejected_count
         FROM stats
     )
     GROUP BY story_id
@@ -75,10 +75,12 @@ GROUP BY owner
 8. Трудозатраты на ревью относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual review к значениям поля Actual dev.
 ```sql
 SELECT 
+	owner as developer,
     AVG(qa_part) AS avg_qa_part,
     AVG(review_part) AS avg_review_part
 FROM (
     SELECT 
+		owner,
         story_id,
         IIF(actual_qa>actual_dev, 1 , 
             IIF(actual_qa == 0, 0, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))
@@ -88,6 +90,7 @@ FROM (
         ) as review_part
     FROM (
         SELECT DISTINCT
+			owner,
             story_id,
             actual_dev - 0 as actual_dev,
             actual_qa - 0 as actual_qa,
@@ -95,6 +98,7 @@ FROM (
         FROM stats
     )
 )
+GROUP BY owner
 ```
 
 9. Срок выполнения задач - среднее значение кол-ва дней между первым переносом задачи в In dev и переносом задачи в Completed.
