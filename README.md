@@ -20,7 +20,7 @@ FROM(
     story_id,
     IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer
     FROM stats
-    WHERE state=="Completed"
+    WHERE state == "Completed"
 )
 GROUP BY developer
 ```
@@ -31,7 +31,7 @@ GROUP BY developer
 SELECT 
 	owner as developer,
 	avg( first_estimate_delta ) avg_first_estimate_deviation,
-	avg( second_estimate_delta )avg_second_estimate_deviation
+	avg( second_estimate_delta ) avg_second_estimate_deviation
 FROM ( -- большой разброс в значений
     SELECT DISTINCT
 	story_id,
