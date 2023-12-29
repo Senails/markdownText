@@ -1,5 +1,5 @@
 
-1.
+1. Общее кол-во задач - Кол-во стори, которые хоть раз переводились в статус In dev + в поле Owner хоть раз стоял разработчик Х.
 ```sql
     SELECT developer, COUNT(story_id) AS all_story_count
     FROM(
@@ -12,7 +12,7 @@
     GROUP BY developer
 ```
 
-2.
+2.Кол-во выполненных задач - сумма всех стори, которые находятся в статусе Completed + в поле Owner хоть раз стоял разработчик Х.
 ```sql
     SELECT developer, COUNT(story_id) AS story_count
     FROM(
