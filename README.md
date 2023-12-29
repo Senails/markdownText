@@ -168,6 +168,16 @@ GROUP BY actual_qa_spendings_member
 
 2. QA Отклонение первичной оценки трудозатрат от фактических трудозатрат -среднее значение по всем стори разницы между первично выставленным значением в поле Estimate QA и последним выставленным значением в поле Actual QA.
 ```sql
+SELECT 
+	AVG(actual_qa - estimate_qa) as avg_estimate_deviation
+FROM (
+	SELECT DISTINCT
+		story_id,
+		estimate_qa - 0 as estimate_qa,
+		actual_qa - 0 as actual_qa
+	FROM stats
+	WHERE (actual_qa - 0) > 0
+)
 ```
 
 3. QA Трудозатраты на тестирование относительно трудозатрат на разработку -  среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
