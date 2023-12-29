@@ -1,26 +1,30 @@
 
 1. Общее кол-во задач - Кол-во стори, которые хоть раз переводились в статус In dev + в поле Owner хоть раз стоял разработчик Х.
 ```sql
-SELECT developer, COUNT(story_id) AS all_story_count
+SELECT 
+	developer, 
+	COUNT(story_id) AS all_story_count
 FROM(
-    SELECT DISTINCT 
-    story_id,
-    IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer 
-    FROM stats
-    WHERE state_changes_to_in_development > 0
+	SELECT DISTINCT 
+	story_id,
+	IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer 
+	FROM stats
+	WHERE state_changes_to_in_development > 0
 )
 GROUP BY developer
 ```
 
 2. Кол-во выполненных задач - сумма всех стори, которые находятся в статусе Completed + в поле Owner хоть раз стоял разработчик Х.
 ```sql
-SELECT developer, COUNT(story_id) AS completed_story_count
+SELECT 
+	developer, 
+	COUNT(story_id) AS completed_story_count
 FROM(
-    SELECT DISTINCT 
-    story_id,
-    IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer
-    FROM stats
-    WHERE state == "Completed"
+	SELECT DISTINCT 
+	story_id,
+	IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer
+	FROM stats
+	WHERE state == "Completed"
 )
 GROUP BY developer
 ```
