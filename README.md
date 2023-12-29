@@ -119,16 +119,17 @@ GROUP BY actual_review_spendings_member
 10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
 ```sql
 SELECT 
-    reviewer as developer,
-    COUNT(story_id) as reviewed_story_count
+	owner as developer,
+	avg(time_on_story) as avg_time_on_story
 FROM (
-    SELECT DISTINCT
-        story_id,
-        reviewer
-    FROM stats
-    WHERE reviewer != ""
+	SELECT DISTINCT
+		story_id,
+		owner,
+		JULIANDAY(first_move_to_in_development)- JULIANDAY(story_created_at) as time_on_story
+	FROM stats
+	WHERE owner != ""
 )
-GROUP BY reviewer
+GROUP BY owner
 ```
 
 11. Срок ожидания ревью в очереди - среднее значение кол-ва дней, которое стори находится в статусе Ready for review + в поле Reviewer выставлен разработчик Х.
