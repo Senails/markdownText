@@ -110,7 +110,7 @@ FROM (
 	SELECT DISTINCT
 		story_id,
 		owner,
-		JULIANDAY(first_move_to_in_development)- JULIANDAY(story_created_at) as time_on_story
+		JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
 	FROM stats
 	WHERE owner != ""
 )
