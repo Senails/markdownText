@@ -17,11 +17,13 @@ SELECT DISTINCT
 	review_spandings_table.avg_spandings_for_review
 FROM stats
 LEFT JOIN(
-	SELECT developer, COUNT(story_id) AS all_story_count
+	SELECT 
+		developer, 
+		COUNT(story_id) AS all_story_count
 	FROM(
 		SELECT DISTINCT 
 		story_id,
-		IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer 
+		IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer 
 		FROM stats
 		WHERE state_changes_to_in_development > 0
 	)
@@ -29,13 +31,15 @@ LEFT JOIN(
 ) as count_table
 ON count_table.developer == owner
 LEFT JOIN(
-	SELECT developer, COUNT(story_id) AS completed_story_count
+	SELECT 
+		developer, 
+		COUNT(story_id) AS completed_story_count
 	FROM(
 		SELECT DISTINCT 
 		story_id,
-		IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer
+		IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer
 		FROM stats
-		WHERE state=="Completed"
+		WHERE state == "Completed"
 	)
 	GROUP BY developer
 ) as completed_table
@@ -45,7 +49,7 @@ LEFT JOIN(
 		owner as developer,
 		avg( first_estimate_delta ) avg_first_estimate_deviation,
 		avg( second_estimate_delta ) avg_second_estimate_deviation
-	FROM (
+	FROM ( -- большой разброс в значений
 		SELECT DISTINCT
 		story_id,
 		owner,
