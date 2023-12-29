@@ -5,7 +5,7 @@ SELECT developer, COUNT(story_id) AS all_story_count
 FROM(
     SELECT DISTINCT 
     story_id,
-    IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer 
+    IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer 
     FROM stats
     WHERE state_changes_to_in_development > 0
 )
@@ -18,7 +18,7 @@ SELECT developer, COUNT(story_id) AS completed_story_count
 FROM(
     SELECT DISTINCT 
     story_id,
-    IIF(actual_dev_spendings_member == "", owner ,actual_dev_spendings_member ) AS developer
+    IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member ) AS developer
     FROM stats
     WHERE state == "Completed"
 )
