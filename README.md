@@ -14,7 +14,7 @@ GROUP BY developer
 
 2. Кол-во выполненных задач - сумма всех стори, которые находятся в статусе Completed + в поле Owner хоть раз стоял разработчик Х.
 ```sql
-SELECT developer, COUNT(story_id) AS story_count
+SELECT developer, COUNT(story_id) AS completed_story_count
 FROM(
     SELECT DISTINCT 
     story_id,
@@ -29,15 +29,18 @@ GROUP BY developer
 4. Отклонения вторичной оценки трудозатрат от фактических трудозатрат - среднее значение по всем стори разницы между вторым выставленным значением в поле Estimate и последним выставленным значением в поле Actual dev.
 ```sql
 SELECT 
-    AVG( first_estimate_delta ) avg_first_estimate_delta,
-    AVG( second_estimate_delta )avg_second_estimate_delta
+	owner,
+    AVG( first_estimate_delta ) avg_first_estimate_deviation,
+    AVG( second_estimate_delta )avg_second_estimate_deviation
 FROM ( -- большой разброс в значений
     SELECT DISTINCT
         story_id,
+		owner,
         (estimate_first_value - actual_dev) as first_estimate_delta,
         (estimate_second_value - actual_dev) as second_estimate_delta
     FROM stats
 )
+GROUP BY owner
 ```
 
 5. Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
