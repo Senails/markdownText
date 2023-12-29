@@ -201,4 +201,23 @@ GROUP BY qa
 
 4. QA Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
 ```sql
+SELECT 
+	qa,
+	AVG(pulls_qa_rejected_count) as avg_pulls_qa_rejected_count
+FROM (
+	SELECT 
+		story_id,
+		qa,
+		SUM(pulls_qa_rejected_count) as pulls_qa_rejected_count
+	FROM (
+		SELECT DISTINCT
+			story_id,
+			qa,
+			pulls_qa_rejected_count - 0 as pulls_qa_rejected_count
+		FROM stats
+		WHERE qa != ""
+	)
+	GROUP BY story_id
+)
+GROUP BY qa
 ```
