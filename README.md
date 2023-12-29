@@ -149,3 +149,31 @@ FROM (
 )
 GROUP BY actual_review_spendings_member
 ```
+
+1. QA Общее кол-во задач - кол-во стори, которые хоть раз переводились в статус In dev + в поле QA хоть раз стоял тестировщик Х.
+```sql
+SELECT 
+	actual_qa_spendings_member as QA,
+	COUNT(story_id) as story_count
+FROM (
+	SELECT DISTINCT
+		story_id,
+		first_move_to_in_development,
+		actual_qa_spendings_member
+	FROM stats
+	WHERE actual_qa_spendings_member != ""
+)
+GROUP BY actual_qa_spendings_member
+```
+
+2. QA Отклонение первичной оценки трудозатрат от фактических трудозатрат -среднее значение по всем стори разницы между первично выставленным значением в поле Estimate QA и последним выставленным значением в поле Actual QA.
+```sql
+```
+
+3. QA Трудозатраты на тестирование относительно трудозатрат на разработку -  среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
+```sql
+```
+
+4. QA Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
+```sql
+```
