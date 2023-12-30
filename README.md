@@ -40,8 +40,8 @@ FROM ( -- большой разброс в значений
     SELECT DISTINCT
 	story_id,
 	owner,
-	(actual_dev - estimate_first_value) as first_estimate_delta,
-	(actual_dev - estimate_second_value) as second_estimate_delta
+	IIF(estimate_first_value - 0 > 0, actual_dev - estimate_first_value, 0) as first_estimate_delta,
+	IIF(estimate_second_value - 0 > 0, actual_dev - estimate_second_value, 0) as second_estimate_delta
     FROM stats
 )
 GROUP BY owner
