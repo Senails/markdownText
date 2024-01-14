@@ -128,7 +128,7 @@
 ```
 =LAMBDA( startTable; 
     LAMBDA( story_id; reviewer; total_days_ready_for_review;
-        QUERY({story_id \ reviewer \ total_days_ready_for_review}
+        QUERY({story_id \ reviewer \ ARRAYFORMULA(IF( total_days_ready_for_review = ""; 0; FLOOR(total_days_ready_for_review))) }
         ; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'developer', AVG(Col3) 'avg_waiting_review' " )
     )( 
     TRANSPOSE(INDEX(startTable;1));
