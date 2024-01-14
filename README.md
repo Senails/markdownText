@@ -217,7 +217,7 @@ LAMBDA( startTable;
 LAMBDA( startTable; 
     LAMBDA( story_id; qa; pulls_qa_rejected_count;
         QUERY(
-            QUERY({ story_id \ qa \ pulls_qa_rejected_count}
+            QUERY({ story_id \ qa \ ARRAYFORMULA(IF(pulls_qa_rejected_count =""; 0; pulls_qa_rejected_count))}
             ; "SELECT Col1, Col2, SUM(Col3) GROUP BY Col1, Col2")
         ; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'qa', AVG(Col3) 'avg_pulls_qa_rejected_count' ")
     )( 
