@@ -176,88 +176,67 @@ ON review_spandings_table.developer == owner
 ```
 
 ### QA
-```sql
-SELECT DISTINCT
-	names.qa as qa,
-	count_table.story_count,
-	deviation_table.avg_deviation,
-	qa_part_table.avg_qa_part,
-	reject_table.avg_pulls_qa_rejected_count
-FROM (
-	SELECT qa
-	FROM (
-			SELECT qa FROM stats 
-			UNION 
-			SELECT actual_qa_spendings_member as qa FROM stats
-	)
-	WHERE qa != ""
-) as names
-LEFT JOIN (
-	SELECT 
-		actual_qa_spendings_member as tester,
-		COUNT(story_id) as story_count
-	FROM (
-		SELECT DISTINCT
-			story_id,
-			actual_qa_spendings_member
-		FROM stats
-		WHERE actual_qa_spendings_member != "" AND state_changes_to_in_development > 0
-	)
-	GROUP BY actual_qa_spendings_member
-) as count_table
-ON count_table.tester = names.qa
-LEFT JOIN (
-	SELECT 
-		qa as tester,
-		AVG(deviation) as avg_deviation
-	FROM (
-		SELECT DISTINCT
-			story_id,
-			qa,
-			actual_qa - estimate_qa as deviation
-		FROM stats
-		WHERE qa != "" AND actual_qa > 0
-	)
-	GROUP BY qa
-) as deviation_table
-ON deviation_table.tester = names.qa
-LEFT JOIN (
-	SELECT
-		qa as tester,
-		AVG(IIF(actual_dev == 0, 1, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))) as avg_qa_part
-	FROM (
-		SELECT DISTINCT
-			story_id,
-			qa,
-			actual_qa - 0 as actual_qa,
-			actual_dev - 0 as actual_dev
-		FROM stats
-		WHERE qa != "" AND actual_qa > 0
-	)
-	GROUP BY qa
-) as qa_part_table
-ON qa_part_table.tester = names.qa
-LEFT JOIN (
-	SELECT 
-		qa as tester,
-		AVG(pulls_qa_rejected_count) as avg_pulls_qa_rejected_count
-	FROM (
-		SELECT 
-			story_id,
-			qa,
-			SUM(pulls_qa_rejected_count) as pulls_qa_rejected_count
-		FROM (
-			SELECT DISTINCT
-				story_id,
-				qa,
-				pulls_qa_rejected_count - 0 as pulls_qa_rejected_count
-			FROM stats
-			WHERE qa != ""
-		)
-		GROUP BY story_id
-	)
-	GROUP BY qa
-) as reject_table
-ON reject_table.tester = names.qa
-WHERE names.qa != "";
+```
+=LAMBDA( namesTable; count_table; deviation_table; qa_part_table; rejected_count_table;
+    {
+     namesTable \
+     QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( count_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'story_count' ")\
+     QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( deviation_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_deviation' ")\
+     QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( qa_part_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_qa_part' ")\
+     QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( rejected_count_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_pulls_qa_rejected_count' ")
+    }
+)(
+LAMBDA( startTable; 
+    LAMBDA( qa; actual_qa_spendings_member;
+        UNIQUE({ 
+            QUERY( qa; "SELECT * WHERE Col1 <> '' " ) ;
+            QUERY( actual_qa_spendings_member ; "SELECT * WHERE Col1 <> '' OFFSET 1")
+        }) 
+    )( 
+    TRANSPOSE(INDEX(startTable;1));
+    TRANSPOSE(INDEX(startTable;2)))    
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT S, AV "))));
+
+LAMBDA( startTable; 
+    LAMBDA( story_id; spender; 
+        QUERY({ story_id \ spender }; "SELECT Col2, COUNT(Col1) GROUP BY Col2 LABEL Col2 'qa', COUNT(Col1) 'story_count' ")
+    )( 
+    TRANSPOSE(INDEX(startTable;1));
+    TRANSPOSE(INDEX(startTable;2)))    
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, AV WHERE AV <> '' "))));
+
+LAMBDA( startTable; 
+    LAMBDA( story_id; qa; actual_qa; estimate_qa;
+        QUERY({ story_id \ qa \ ARRAYFORMULA( actual_qa - estimate_qa ) }; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'qa', AVG(Col3) 'avg_deviation' ")
+    )( 
+    TRANSPOSE(INDEX(startTable;1));
+    TRANSPOSE(INDEX(startTable;2));
+    TRANSPOSE(INDEX(startTable;3));
+    TRANSPOSE(INDEX(startTable;4)))    
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, S, T, Z WHERE S <> '' "))));
+
+LAMBDA( startTable; 
+    LAMBDA( story_id; qa; actual_qa; actual_dev;
+        QUERY({ story_id \ qa \
+        ARRAYFORMULA(IF(actual_dev = ""; 1; actual_qa / actual_dev ))}
+        ; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL AVG(Col3) 'avg_qa_part' ")
+    )( 
+    TRANSPOSE(INDEX(startTable;1));
+    TRANSPOSE(INDEX(startTable;2));
+    TRANSPOSE(INDEX(startTable;3));
+    TRANSPOSE(INDEX(startTable;4)))    
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, S, T, U WHERE S <> '' "))));
+
+LAMBDA( startTable; 
+    LAMBDA( story_id; qa; pulls_qa_rejected_count;
+        QUERY(
+            QUERY({ story_id \ qa \ pulls_qa_rejected_count}
+            ; "SELECT Col1, Col2, SUM(Col3) GROUP BY Col1, Col2")
+        ; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'qa', AVG(Col3) 'avg_pulls_qa_rejected_count' ")
+    )( 
+    TRANSPOSE(INDEX(startTable;1));
+    TRANSPOSE(INDEX(startTable;2));
+    TRANSPOSE(INDEX(startTable;3)))    
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, S, J WHERE S <> '' "))))
+)
 ```
