@@ -178,13 +178,21 @@ ON review_spandings_table.developer == owner
 ### QA
 ```sql
 SELECT DISTINCT
-	qa,
+	names.qa as qa,
 	count_table.story_count,
 	deviation_table.avg_deviation,
 	qa_part_table.avg_qa_part,
 	reject_table.avg_pulls_qa_rejected_count
-FROM stats
-LEFT JOIN(
+FROM (
+	SELECT qa
+	FROM (
+			SELECT qa FROM stats 
+			UNION 
+			SELECT actual_qa_spendings_member as qa FROM stats
+	)
+	WHERE qa != ""
+) as names
+LEFT JOIN (
 	SELECT 
 		actual_qa_spendings_member as tester,
 		COUNT(story_id) as story_count
@@ -197,8 +205,8 @@ LEFT JOIN(
 	)
 	GROUP BY actual_qa_spendings_member
 ) as count_table
-ON count_table.tester == qa
-LEFT JOIN(
+ON count_table.tester = names.qa
+LEFT JOIN (
 	SELECT 
 		qa as tester,
 		AVG(deviation) as avg_deviation
@@ -212,8 +220,8 @@ LEFT JOIN(
 	)
 	GROUP BY qa
 ) as deviation_table
-ON deviation_table.tester == qa
-LEFT JOIN(
+ON deviation_table.tester = names.qa
+LEFT JOIN (
 	SELECT
 		qa as tester,
 		AVG(IIF(actual_dev == 0, 1, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))) as avg_qa_part
@@ -228,8 +236,8 @@ LEFT JOIN(
 	)
 	GROUP BY qa
 ) as qa_part_table
-ON qa_part_table.tester == qa
-LEFT JOIN(
+ON qa_part_table.tester = names.qa
+LEFT JOIN (
 	SELECT 
 		qa as tester,
 		AVG(pulls_qa_rejected_count) as avg_pulls_qa_rejected_count
@@ -250,6 +258,6 @@ LEFT JOIN(
 	)
 	GROUP BY qa
 ) as reject_table
-ON reject_table.tester == qa
-WHERE qa != ""
+ON reject_table.tester = names.qa
+WHERE names.qa != "";
 ```
