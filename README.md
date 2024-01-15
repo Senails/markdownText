@@ -130,6 +130,86 @@ function getDaysBetweenDates( dateIso1 , dateIso2) {
     return null;
 }
 
+// преобразования имен
+function convertShortcutMemberName( str ){
+    const dictionary = {
+        [`Timur Dondokov`]: '', 
+        [`Erdem Nikolaev`]: '',
+        [`Elvira Baldanova`]: '',
+        [`Iaroslav Dzhurov`]: '',
+        [`Dolgora Budaeva`]: '', //5
+
+        [`Anne Zolotova`]: 'Zolotova Anne',
+        [`Vladimir Mikhno`]: '',
+        [`Nikolay Derkachev`]: '',
+        [`Anton Leontyuk`]: '',
+        [`Grigory Mizhidon`]: '', //10
+
+        [`Sergey Kulabukhov`]: 'Sergey Kulakbuhov',
+        [`Alexander Erin`]: '',
+        [`Vyacheslav Dorzhiev`]: '',
+        [`Daria Lipinskaia`]: '',
+        [`Konstantin Solovev`]: '', //15
+
+        [`Vasily Sentyay`]: '',
+        [`Vladimir Fyodorov`]: '',
+        [`Georgy Nemtsov`]: '',
+        [`Alexey Dudyakov`]: '',
+        [`Dmitry Nevzorov"`]: '', //20
+
+        [`Ilya Shlyakhovoy`]: '',
+        [`Николай Максимов`]: '',
+        [`Aarif Khamdi`]: '',
+        [`Nikolay Papakha`]: '',
+        [`Dmitry Potapenko`]: '', //25
+
+        [`Никита Былёв`]: '',
+        [`Alexey Krotov`]: '',
+        [`Daria`]: 'Daria Lipinskaia',
+        [`Daniil Kolesnikov`]: '',
+        [`andy`]: '', //30
+
+        [`Mikhail Zhdanov`]: '',
+        [`Сергей Жуткевич`]: '',
+        [`Alexandra Pereverzina`]: '',
+        [`Igor Karpov`]: '',
+        [`Tatyana Zemtsova`]: '', //35
+
+        [`Sergey Slipchenko`]: '',
+        [`Victor Konyukhov`]: '',
+        [`Zolotova Anne`]: '',
+        [`Margarita Gerasimenko`]: '',
+        [`vasuta.eugene`]: '', //40
+
+        [`Erdem`]: 'Erdem Nikolaev',
+        [`Olga Nikonchuk`]: 'Ольга Никончук',
+        [`Denis Romanov`]: '',
+        [`Alla Sitnikova`]: '',
+        [`Pavel`]: '', //45
+
+        [`Victor Gordeev`]: '',
+        [`Tanat`]: '',
+        [`Evgenii`]: '',
+        [`Alexander Volkov`]: '',
+        [`Ivan Sokolov`]: '', //50
+
+        [`Alexander Cherdak`]: '',
+        [`Vladimir Rubanyuk`]: '',
+        [`Vadim Karpov`]: '',
+        [`Dora Budaeva`]: 'Dolgora Budaeva',
+        [`Artur Isaev`]: '', //55
+
+        [`Matvey Alexeev`]: '',
+        [`Kuzma Shevelev`]: 'Kuzma Shevelev',
+        [`Lavr Prokopiev`]: '',
+        [`Mikhail Razumovskiy`]: '',
+        [`Evgeny Obraztsov`]: '', //60
+
+    };
+    
+    return dictionary[String(str)] ? dictionary[String(str)] : str;
+}
+
 // функция для сбора статистики с стори (shortcut)
 function createStoryStats(story, storyHistory) {
     const stats = {
@@ -140,7 +220,7 @@ function createStoryStats(story, storyHistory) {
                ...story.story_type.slice(1)
         ].join(''),
 
-        owner: getMemberNameById(story.owner_ids.find(() => true)),
+        owner: convertShortcutMemberName(getMemberNameById(story.owner_ids.find(() => true))),
 
         pulls: story.pull_requests.map( e => {
             return {
@@ -153,15 +233,18 @@ function createStoryStats(story, storyHistory) {
         })
     };
 
-    stats.actual_dev_spendings = getSpandings(storyHistory, ['Actual', 'Actual dev']);
-    stats.actual_review_spendings = getSpandings(storyHistory, ['Actual review']);
-    stats.actual_qa_spendings = getSpandings(storyHistory, ['Actual QA']);
+    stats.actual_dev_spendings = getSpandings(storyHistory, ['Actual', 'Actual dev'])
+                .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
+    stats.actual_review_spendings = getSpandings(storyHistory, ['Actual review'])
+                .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
+    stats.actual_qa_spendings = getSpandings(storyHistory, ['Actual QA'])
+                .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
     
-    stats.owners_from_history = stats.actual_dev_spendings.map( ({member}) => member);
-    stats.reviewers_from_history = stats.actual_review_spendings.map( ({member}) => member);
+    stats.owners_from_history = stats.actual_dev_spendings.map( ({member}) => convertShortcutMemberName(member) );
+    stats.reviewers_from_history = stats.actual_review_spendings.map( ({member}) => convertShortcutMemberName(member) );
 
-    stats.reviewer = getCustomFieldValue( story, 'Reviewer' ) || null;
-    stats.qa = getCustomFieldValue( story, 'QA' ) || null;
+    stats.reviewer = convertShortcutMemberName(getCustomFieldValue( story, 'Reviewer' )) || null;
+    stats.qa = convertShortcutMemberName(getCustomFieldValue( story, 'QA' )) || null;
 
     stats.actual_qa = parseInt(getCustomFieldValue( story, 'Actual QA' )) || null;
     stats.actual_dev = parseInt(getCustomFieldValue( story, 'Actual dev' )) || null;
@@ -955,6 +1038,6 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr, fileFormat) {
 
 // стори попадает в статистику если она создана после первой даты
 // и была перемещена в разработку после второй даты
-await collectStatsAfterDate('2021.06.02', '2023.01.01', 'csv');
-// await collectStatsAfterDate('2023.09.01', '2023.11.01', 'csv');
+// await collectStatsAfterDate('2021.06.02', '2023.01.01', 'csv');
+await collectStatsAfterDate('2023.09.01', '2023.11.01', 'csv');
 ```
