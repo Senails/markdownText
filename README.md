@@ -26,7 +26,7 @@
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( reviewed_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'review_story_count' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( waiting_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_wait_review' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( review_spandings_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_spandings_for_review' ")
-    }; "SELECT * LABEL Col1 'developer'")
+    }; "SELECT * ORDER BY Col1 LABEL Col1 'developer' ")
 )(
 LAMBDA( startTable; 
     LAMBDA( owner; actual_dev_spendings_member;
