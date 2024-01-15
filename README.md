@@ -21,6 +21,8 @@ FROM (
         SELECT owner AS developer FROM stats 
         UNION 
         SELECT actual_dev_spendings_member AS developer FROM stats
+		UNION 
+        SELECT actual_review_spendings_member AS developer FROM stats
     )
     WHERE developer != ""
 ) AS names
