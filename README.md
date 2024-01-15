@@ -18,7 +18,7 @@
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( completed_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'completed_story_count' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( deviation_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_first_estimate_deviation' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( deviation_table ; "SELECT Col3 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_second_estimate_deviation' ")\
-     QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( rejected_table ; "SELECT Col3 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_pulls_qa_rejected_count' ")\
+     QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( rejected_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_pulls_qa_rejected_count' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( rejected_table ; "SELECT Col3 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_pulls_reviewer_rejected_count' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( part_table ; "SELECT Col2 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_qa_part' ")\
      QUERY(MAP(namesTable; LAMBDA( name ; IFERROR(QUERY( part_table ; "SELECT Col3 WHERE Col1 = '" & name & "'"; 0); "") )); "SELECT * LABEL Col1 'avg_review_part' ")\
