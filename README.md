@@ -98,18 +98,18 @@
 ```
 
 9. Срок выполнения задач - среднее значение кол-ва дней между первым переносом задачи в In dev и переносом задачи в Completed.
-```sql
+```
 =LAMBDA( startTable; 
     LAMBDA( story_id; owner; story_completed; first_move_to_in_development;
         QUERY({ story_id \ owner \ 
-        ARRAYFORMULA(DATEDIF( LEFT(first_move_to_in_development; 10); LEFT(story_completed; 10); "D" ) )}
+        ARRAYFORMULA(IFERROR( TO_DATE(LEFT(story_completed; 19)) - TO_DATE(LEFT(first_move_to_in_development; 19)); "") )}
         ; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'developer', AVG(Col3) 'avg_time_on_story'")
     )( 
     TRANSPOSE(INDEX(startTable;1)); 
     TRANSPOSE(INDEX(startTable;2));
     TRANSPOSE(INDEX(startTable;3));
     TRANSPOSE(INDEX(startTable;4)))  
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, D, AJ, AK WHERE D <> ''"))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, D, AJ, AK WHERE D <> '' AND AJ <> '' "))))
 ```
 
 10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
