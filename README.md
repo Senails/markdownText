@@ -2,27 +2,38 @@
 1. Общее кол-во задач - Кол-во стори, которые хоть раз переводились в статус In dev + в поле Owner хоть раз стоял разработчик Х.
 ```
 =LAMBDA( startTable; 
-    LAMBDA( story_id; spender; owner;
-        QUERY( { story_id \ ARRAYFORMULA(IF( spender=""; owner; spender )) }; 
+    LAMBDA( story_id; actual_dev_spendings_member; owner;
+        QUERY( { story_id \ ARRAYFORMULA(IF( actual_dev_spendings_member=""; owner; actual_dev_spendings_member )) }; 
         "SELECT Col2, COUNT(Col1) WHERE Col2 <>'' GROUP BY Col2 LABEL Col2 'developer', COUNT(Col1) 'story_count' ")
     )( 
     TRANSPOSE(INDEX(startTable;1)); 
     TRANSPOSE(INDEX(startTable;2)); 
     TRANSPOSE(INDEX(startTable;3)))    
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, L, D WHERE AF > 0 "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "") 
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_dev_spendings_member"; table!1:1; 0); 4); "1"; "") 
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "") 
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("state_changes_to_in_development"; table!1:1; 0); 4); "1"; "") & " > 0 "))))
 ```
 
 2. Кол-во выполненных задач - сумма всех стори, которые находятся в статусе Completed + в поле Owner хоть раз стоял разработчик Х.
 ```
 =LAMBDA( startTable; 
-    LAMBDA( story_id; spender; owner;
-        QUERY( { story_id \ ARRAYFORMULA(IF( spender=""; owner; spender )) }; 
+    LAMBDA( story_id; actual_dev_spendings_member; owner;
+        QUERY( { story_id \ ARRAYFORMULA(IF( actual_dev_spendings_member=""; owner; actual_dev_spendings_member )) }; 
         "SELECT Col2, COUNT(Col1) WHERE Col2 <>'' GROUP BY Col2 LABEL Col2 'developer', COUNT(Col1) 'story_count' ")
     )( 
     TRANSPOSE(INDEX(startTable;1)); 
     TRANSPOSE(INDEX(startTable;2)); 
     TRANSPOSE(INDEX(startTable;3)))    
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, L, D WHERE AF > 0 AND AE = 'Completed' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_dev_spendings_member"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "") 
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("state_changes_to_in_development"; table!1:1; 0); 4); "1"; "") & " > 0 AND " 
+& SUBSTITUTE(ADDRESS(1; MATCH("state"; table!1:1; 0); 4); "1"; "") & " = 'Completed' "))))
 ```
 
 3. Отклонения первичной оценки трудозатрат от фактических трудозатрат - среднее значение по всем стори разницы между первично выставленным значением в поле Estimate и последним выставленным значением в поле Actual dev.
@@ -40,7 +51,14 @@
     TRANSPOSE(INDEX(startTable;3));
     TRANSPOSE(INDEX(startTable;4));
     TRANSPOSE(INDEX(startTable;5)))   
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, D, U, AA, AB WHERE D <> ''"))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_dev"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("estimate_first_value"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("estimate_second_value"; table!1:1; 0); 4); "1"; "") 
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "") & " <> '' "))))
 ```
 
 5. Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
@@ -60,7 +78,15 @@
     TRANSPOSE(INDEX(startTable;2)); 
     TRANSPOSE(INDEX(startTable;5));
     TRANSPOSE(INDEX(startTable;6)))  
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, D, G, E, J, K WHERE AF > 0 ")))))
+)( ( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("pulls_repository"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("pulls_pull_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("pulls_qa_rejected_count"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("pulls_reviewer_rejected_count"; table!1:1; 0); 4); "1"; "") 
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("state_changes_to_in_development"; table!1:1; 0); 4); "1"; "") & " > 0  "))))))
 ```
 
 7. Трудозатраты на тестирование относительно трудозатрат на разработку - среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
@@ -94,7 +120,12 @@
     TRANSPOSE(INDEX(startTable;3));
     TRANSPOSE(INDEX(startTable;4));
     TRANSPOSE(INDEX(startTable;5)))) 
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT D, A, U, T, V "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_dev"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_qa"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_review"; table!1:1; 0); 4); "1"; "") ))))
 ```
 
 9. Срок выполнения задач - среднее значение кол-ва дней между первым переносом задачи в In dev и переносом задачи в Completed.
@@ -109,7 +140,14 @@
     TRANSPOSE(INDEX(startTable;2));
     TRANSPOSE(INDEX(startTable;3));
     TRANSPOSE(INDEX(startTable;4)))  
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, D, AJ, AK WHERE D <> '' AND AJ <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("story_completed_at"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("first_move_to_in_development"; table!1:1; 0); 4); "1"; "") 
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("owner"; table!1:1; 0); 4); "1"; "") & " <> '' "
+& "AND " & SUBSTITUTE(ADDRESS(1; MATCH("story_completed_at"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 10. Общее кол-во задач на ревью - Кол-во стори, в которых разработчик Х был проставлен в поле Reviewer.
@@ -121,7 +159,11 @@
     )( 
     TRANSPOSE(INDEX(startTable;1)); 
     TRANSPOSE(INDEX(startTable;2)))   
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, R WHERE R <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("reviewer"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("reviewer"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 11. Срок ожидания ревью в очереди - среднее значение кол-ва дней, которое стори находится в статусе Ready for review + в поле Reviewer выставлен разработчик Х.
@@ -134,7 +176,12 @@
     TRANSPOSE(INDEX(startTable;1));
     TRANSPOSE(INDEX(startTable;2)); 
     TRANSPOSE(INDEX(startTable;3)))   
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, R, AQ WHERE R <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("reviewer"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("total_days_ready_for_review"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("reviewer"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 12. Трудозатраты на ревью - среднее значение списаний разработчика Х в поле Acrual review.
@@ -147,7 +194,12 @@
     TRANSPOSE(INDEX(startTable;1));
     TRANSPOSE(INDEX(startTable;2)); 
     TRANSPOSE(INDEX(startTable;3)))   
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, N, O WHERE N <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_review_spendings_member"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_review_spendings_total_hours"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("actual_review_spendings_member"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 1. QA Общее кол-во задач - кол-во стори, которые хоть раз переводились в статус In dev + в поле QA хоть раз стоял тестировщик Х.
