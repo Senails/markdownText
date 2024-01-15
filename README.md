@@ -205,25 +205,37 @@
 1. QA Общее кол-во задач - кол-во стори, которые хоть раз переводились в статус In dev + в поле QA хоть раз стоял тестировщик Х.
 ```
 =LAMBDA( startTable; 
-    LAMBDA( story_id; spender; 
-        QUERY({ story_id \ spender }; "SELECT Col2, COUNT(Col1) GROUP BY Col2 LABEL Col2 'qa', COUNT(Col1) 'story_count' ")
+    LAMBDA( story_id; actual_qa_spendings_member; 
+        QUERY({ story_id \ actual_qa_spendings_member }
+        ; "SELECT Col2, COUNT(Col1) GROUP BY Col2 LABEL Col2 'qa', COUNT(Col1) 'story_count' ")
     )( 
     TRANSPOSE(INDEX(startTable;1));
     TRANSPOSE(INDEX(startTable;2)))    
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, AV WHERE AV <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_qa_spendings_member"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("actual_qa_spendings_member"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 2. QA Отклонение первичной оценки трудозатрат от фактических трудозатрат -среднее значение по всем стори разницы между первично выставленным значением в поле Estimate QA и последним выставленным значением в поле Actual QA.
 ```sql
 =LAMBDA( startTable; 
     LAMBDA( story_id; qa; actual_qa; estimate_qa;
-        QUERY({ story_id \ qa \ ARRAYFORMULA( actual_qa - estimate_qa ) }; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'qa', AVG(Col3) 'avg_deviation' ")
+        QUERY({ story_id \ qa \ ARRAYFORMULA( actual_qa - estimate_qa ) }
+        ; "SELECT Col2, AVG(Col3) GROUP BY Col2 LABEL Col2 'qa', AVG(Col3) 'avg_deviation' ")
     )( 
     TRANSPOSE(INDEX(startTable;1));
     TRANSPOSE(INDEX(startTable;2));
     TRANSPOSE(INDEX(startTable;3));
     TRANSPOSE(INDEX(startTable;4)))    
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, S, T, Z WHERE S <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("qa"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_qa"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("estimate_qa"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("qa"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 3. QA Трудозатраты на тестирование относительно трудозатрат на разработку -  среднее значение соотношения значений поля Actual QA к значениям поля Actual dev.
@@ -238,7 +250,13 @@
     TRANSPOSE(INDEX(startTable;2));
     TRANSPOSE(INDEX(startTable;3));
     TRANSPOSE(INDEX(startTable;4)))    
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, S, T, U WHERE S <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("qa"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_qa"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("actual_dev"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("qa"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
 
 4. QA Кол-во итераций тестирования - среднее значение кол-ва переносов стори в статус In QA / кол-ва выставления лейбла QA Rejected в пулле.
@@ -253,5 +271,10 @@
     TRANSPOSE(INDEX(startTable;1));
     TRANSPOSE(INDEX(startTable;2));
     TRANSPOSE(INDEX(startTable;3)))    
-)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; "SELECT A, S, J WHERE S <> '' "))))
+)( TRANSPOSE(UNIQUE(QUERY(table!A:AX; 
+"SELECT " & SUBSTITUTE(ADDRESS(1; MATCH("story_id"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("qa"; table!1:1; 0); 4); "1"; "")
+& ", " & SUBSTITUTE(ADDRESS(1; MATCH("pulls_qa_rejected_count"; table!1:1; 0); 4); "1"; "")
+& " WHERE " 
+& SUBSTITUTE(ADDRESS(1; MATCH("qa"; table!1:1; 0); 4); "1"; "") & " <> '' ") )) )
 ```
