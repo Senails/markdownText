@@ -119,17 +119,17 @@ LEFT JOIN (
 ) AS part_table ON part_table.developer = names.developer
 LEFT JOIN (
     SELECT 
-        owner AS developer,
-        AVG(time_on_story) AS avg_time_on_story
-    FROM (
-        SELECT DISTINCT
-            story_id,
-            owner,
-            JULIANDAY(first_move_to_in_development) - JULIANDAY(story_created_at) AS time_on_story
-        FROM stats
-        WHERE owner != ""
-    )
-    GROUP BY owner
+		owner as developer,
+		avg(time_on_story) as avg_time_on_story
+	FROM (
+		SELECT DISTINCT
+			story_id,
+			owner,
+			JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
+		FROM stats
+		WHERE owner != ""
+	)
+	GROUP BY owner
 ) AS time_story_table ON time_story_table.developer = names.developer
 LEFT JOIN (
     SELECT 
