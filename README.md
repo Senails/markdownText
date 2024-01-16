@@ -71,7 +71,6 @@ LEFT JOIN (
 		IIF(estimate_first_value - 0 > 0, actual_dev - estimate_first_value, 0) as first_estimate_delta,
 		IIF(estimate_second_value - 0 > 0, actual_dev - estimate_second_value, 0) as second_estimate_delta
 	    FROM stats
-		WHERE type != "Bug"
 	)
 	GROUP BY owner
 
@@ -149,7 +148,7 @@ LEFT JOIN (
 			owner,
 			JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
 		FROM stats
-		WHERE owner != "" AND type != "Bug"
+		WHERE owner != ""
 	)
 	GROUP BY owner
 
