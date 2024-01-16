@@ -183,6 +183,7 @@ SELECT DISTINCT
 	count_table.story_count,
 	deviation_table.avg_deviation,
 	qa_part_table.avg_qa_part,
+	reject_table.avg_state_changes_to_in_qa,
 	reject_table.avg_pulls_qa_rejected_count
 FROM (
 	SELECT qa
@@ -239,18 +240,22 @@ LEFT JOIN (
 ) as qa_part_table
 ON qa_part_table.tester = names.qa
 LEFT JOIN (
-	SELECT 
+	SELECT
 		qa as tester,
+		AVG(state_changes_to_in_qa) as avg_state_changes_to_in_qa,
 		AVG(pulls_qa_rejected_count) as avg_pulls_qa_rejected_count
-	FROM (
+	FROM(
 		SELECT 
 			story_id,
 			qa,
+			state_changes_to_in_qa,
 			SUM(pulls_qa_rejected_count) as pulls_qa_rejected_count
 		FROM (
 			SELECT DISTINCT
 				story_id,
 				qa,
+				state_changes_to_in_qa,
+				pull_links,
 				pulls_qa_rejected_count - 0 as pulls_qa_rejected_count
 			FROM stats
 			WHERE qa != ""
