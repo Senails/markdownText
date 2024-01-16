@@ -55,19 +55,22 @@ LEFT JOIN (
     GROUP BY developer
 ) AS completed_table ON completed_table.developer = names.developer
 LEFT JOIN (
-    SELECT 
-        owner AS developer,
-        AVG(first_estimate_delta) AS avg_first_estimate_deviation,
-        AVG(second_estimate_delta) AS avg_second_estimate_deviation
-    FROM (
-        SELECT DISTINCT
-            story_id,
-            owner,
-            IIF(estimate_first_value - 0 > 0, actual_dev - estimate_first_value, 0) AS first_estimate_delta,
-            IIF(estimate_second_value - 0 > 0, actual_dev - estimate_second_value, 0) AS second_estimate_delta
-        FROM stats
-    )
-    GROUP BY owner
+
+	SELECT 
+		owner as developer,
+		avg( first_estimate_delta ) avg_first_estimate_deviation,
+		avg( second_estimate_delta ) avg_second_estimate_deviation
+	FROM ( -- большой разброс в значений
+	    SELECT DISTINCT
+		story_id,
+		owner,
+		IIF(estimate_first_value - 0 > 0, actual_dev - estimate_first_value, 0) as first_estimate_delta,
+		IIF(estimate_second_value - 0 > 0, actual_dev - estimate_second_value, 0) as second_estimate_delta
+	    FROM stats
+		WHERE type != "Bug"
+	)
+	GROUP BY owner
+
 ) AS estimat_table ON estimat_table.developer = names.developer
 LEFT JOIN (
 
