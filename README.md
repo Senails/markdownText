@@ -52,25 +52,31 @@ GROUP BY owner
 ```sql
 SELECT  
 	owner as developer,
+	AVG(state_changes_to_in_qa) AS avg_state_changes_to_in_qa,
 	AVG(pulls_qa_rejected_count) AS avg_pulls_qa_rejected_count,
+	AVG(state_changes_to_ready_for_review) AS avg_state_changes_to_ready_for_review,
 	AVG(pulls_reviewer_rejected_count) AS avg_pulls_reviewer_rejected_count
 FROM (
     SELECT 
-	story_id,
-	owner,
-        SUM(pulls_qa_rejected_count) AS pulls_qa_rejected_count,
-        SUM(pulls_reviewer_rejected_count) AS pulls_reviewer_rejected_count
-    FROM (
-        SELECT DISTINCT
+		story_id,
+		owner,
+		state_changes_to_in_qa,
+		SUM(pulls_qa_rejected_count) AS pulls_qa_rejected_count,
+		state_changes_to_ready_for_review,
+		SUM(pulls_reviewer_rejected_count) AS pulls_reviewer_rejected_count
+	FROM (
+		SELECT DISTINCT
 		story_id, 
 		owner,
 		pulls_repository,
 		pulls_pull_id,
 		pulls_qa_rejected_count,
-		pulls_reviewer_rejected_count
-        FROM stats
-    )
-    GROUP BY story_id
+		pulls_reviewer_rejected_count,
+		state_changes_to_ready_for_review,
+		state_changes_to_in_qa
+		FROM stats
+	)
+	GROUP BY story_id
 )
 GROUP BY owner
 ```
