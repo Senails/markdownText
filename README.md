@@ -149,7 +149,7 @@ LEFT JOIN (
 			owner,
 			JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
 		FROM stats
-		WHERE owner != ""
+		WHERE owner != "" AND type != "Bug"
 	)
 	GROUP BY owner
 
