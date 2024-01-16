@@ -29,6 +29,7 @@ FROM (
     WHERE developer != ""
 ) AS names
 LEFT JOIN (
+
     SELECT 
         developer, 
         COUNT(story_id) AS all_story_count
@@ -40,8 +41,10 @@ LEFT JOIN (
         WHERE state_changes_to_in_development > 0
     )
     GROUP BY developer
+
 ) AS count_table ON count_table.developer = names.developer
 LEFT JOIN (
+
     SELECT 
         developer, 
         COUNT(story_id) AS completed_story_count
@@ -53,6 +56,7 @@ LEFT JOIN (
         WHERE state == "Completed"
     )
     GROUP BY developer
+
 ) AS completed_table ON completed_table.developer = names.developer
 LEFT JOIN (
 
@@ -73,7 +77,6 @@ LEFT JOIN (
 
 ) AS estimat_table ON estimat_table.developer = names.developer
 LEFT JOIN (
-
 
 	SELECT  
 		owner as developer,
@@ -105,9 +108,9 @@ LEFT JOIN (
 	)
 	GROUP BY owner
 	
-	
 ) AS rejected_table ON rejected_table.developer = names.developer
 LEFT JOIN (
+
     SELECT   
         owner AS developer,
         AVG(qa_part) AS avg_qa_part,
@@ -133,9 +136,11 @@ LEFT JOIN (
         )
     )
     GROUP BY owner
+
 ) AS part_table ON part_table.developer = names.developer
 LEFT JOIN (
-    SELECT 
+
+	SELECT 
 		owner as developer,
 		avg(time_on_story) as avg_time_on_story
 	FROM (
@@ -147,8 +152,10 @@ LEFT JOIN (
 		WHERE owner != ""
 	)
 	GROUP BY owner
+
 ) AS time_story_table ON time_story_table.developer = names.developer
 LEFT JOIN (
+
     SELECT 
         reviewer AS developer,
         COUNT(story_id) AS review_story_count
@@ -160,8 +167,10 @@ LEFT JOIN (
         WHERE reviewer != ""
     )
     GROUP BY reviewer
+
 ) AS reviewed_table ON reviewed_table.developer = names.developer
 LEFT JOIN (
+
     SELECT 
         reviewer AS developer,
         AVG(total_days_ready_for_review) AS avg_wait_review
@@ -174,8 +183,10 @@ LEFT JOIN (
         WHERE reviewer != ""
     )
     GROUP BY reviewer
+
 ) AS waiting_table ON waiting_table.developer = names.developer
 LEFT JOIN (
+
     SELECT 
         actual_review_spendings_member AS developer,
         AVG(actual_review_spendings_total_hours) AS avg_spandings_for_review
@@ -188,6 +199,7 @@ LEFT JOIN (
         WHERE actual_review_spendings_member != ""
     )
     GROUP BY actual_review_spendings_member
+
 ) AS review_spandings_table ON review_spandings_table.developer = names.developer;
 ```
 
@@ -201,6 +213,7 @@ SELECT DISTINCT
 	reject_table.avg_state_changes_to_in_qa,
 	reject_table.avg_pulls_qa_rejected_count
 FROM (
+
 	SELECT qa
 	FROM (
 		SELECT qa FROM stats 
@@ -208,8 +221,10 @@ FROM (
 		SELECT actual_qa_spendings_member as qa FROM stats
 	)
 	WHERE qa != ""
+
 ) as names
 LEFT JOIN (
+
 	SELECT 
 		actual_qa_spendings_member as tester,
 		COUNT(story_id) as story_count
@@ -220,10 +235,12 @@ LEFT JOIN (
 		FROM stats
 		WHERE actual_qa_spendings_member != "" AND state_changes_to_in_development > 0
 	)
-	GROUP BY actual_qa_spendings_member
+	GROUP BY 
+ 
 ) as count_table
 ON count_table.tester = names.qa
 LEFT JOIN (
+
 	SELECT 
 		qa as tester,
 		AVG(deviation) as avg_deviation
@@ -236,9 +253,11 @@ LEFT JOIN (
 		WHERE qa != "" AND actual_qa > 0
 	)
 	GROUP BY qa
+
 ) as deviation_table
 ON deviation_table.tester = names.qa
 LEFT JOIN (
+
 	SELECT
 		qa as tester,
 		AVG(IIF(actual_dev == 0, 1, CAST(actual_qa AS REAL) / CAST(actual_dev AS REAL))) as avg_qa_part
@@ -252,9 +271,11 @@ LEFT JOIN (
 		WHERE qa != "" AND actual_qa > 0
 	)
 	GROUP BY qa
+
 ) as qa_part_table
 ON qa_part_table.tester = names.qa
 LEFT JOIN (
+
 	SELECT
 		qa as tester,
 		AVG(state_changes_to_in_qa) as avg_state_changes_to_in_qa,
@@ -278,6 +299,7 @@ LEFT JOIN (
 		GROUP BY story_id
 	)
 	GROUP BY qa
+
 ) as reject_table
 ON reject_table.tester = names.qa
 WHERE names.qa != "";
