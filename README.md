@@ -188,9 +188,9 @@ SELECT DISTINCT
 FROM (
 	SELECT qa
 	FROM (
-			SELECT qa FROM stats 
-			UNION 
-			SELECT actual_qa_spendings_member as qa FROM stats
+		SELECT qa FROM stats 
+		UNION 
+		SELECT actual_qa_spendings_member as qa FROM stats
 	)
 	WHERE qa != ""
 ) as names
