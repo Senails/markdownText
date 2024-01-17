@@ -123,7 +123,7 @@ FROM (
 		owner,
 		JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
 	FROM stats
-	WHERE owner != ""
+	WHERE owner != "" AND epic_name != "SUPPORT BUG REPORTS"
 )
 GROUP BY owner
 ```
