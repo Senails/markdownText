@@ -15,6 +15,7 @@ const excludeEditorsList = [
 if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
     window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
     window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
+    window.epics = await (await fetch('https://app.shortcut.com/backend/api/private/epics', FETCH_CONFIG)).json();
 }
 
 const sum = (...numbers) => {
@@ -130,6 +131,12 @@ function getDaysBetweenDates( dateIso1 , dateIso2) {
     return null;
 }
 
+// будем искать название эпика
+function getEpicNameById(id) {
+    const neededEpic = window.epics.find( obj => obj.id === id);
+    return neededEpic ? neededEpic.name : null;
+}
+
 // преобразования имен
 function convertShortcutMemberName( str ){
     const dictionary = {
@@ -230,7 +237,9 @@ function createStoryStats(story, storyHistory) {
                     .replace(`https://github.com/Good-Proton/`,'')
                     .replace(`/pull/${e.number}`,'')
             }
-        })
+        }),
+
+        epic_name: getEpicNameById(story.epic_id)
     };
 
     stats.actual_dev_spendings = getSpandings(storyHistory, ['Actual', 'Actual dev'])
@@ -550,16 +559,17 @@ async function callectPullData( url ) {
 }
 
 // ищем стори созданые после какой то даты (shortcut)
-async function searchStoryIdsAfteDate(date) {
+async function searchStoryInRange(startDate, endDate) {
     const res = await fetch('https://app.shortcut.com/backend/api/private/stories/search',{
         ...FETCH_CONFIG,
         method: 'POST',
         body: JSON.stringify({
-            created_at_start: date.toISOString()
+            created_at_start: startDate.toISOString(),
+            created_at_end: endDate.toISOString(),
         }),
     })
-    const array = await res.json();
     
+    const array = await res.json();
     return array.map(s => s.id).sort((num1, num2) => num1 - num2 );
 }
 
@@ -847,7 +857,7 @@ function step3(data1, data2) {
     return data1.map( (strory, i) => ({...strory, ...data2[i] }));
 }
 
-async function collectStatsAfterDate( createDateStr, inDevDateStr, fileFormat) {
+async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileFormat = 'csv') {
     // получаем данные из хранилища и буфера обмена
     const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
     await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
@@ -866,10 +876,11 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr, fileFormat) {
     
     if ( url === 'https://app.shortcut.com' ) {
         const inDevDate = new Date(inDevDateStr);
-        const createDate = new Date(createDateStr);
+        const createDateStart = new Date(createDateStr);
+        const createDateEnd = new Date(endRangeDate);
         
-        const arrayStoryIds = await searchStoryIdsAfteDate(createDate);
-        const unicString = createDateStr+inDevDateStr;
+        const arrayStoryIds = await searchStoryInRange(createDateStart, createDateEnd);
+        const unicString = createDateStr + inDevDateStr + endRangeDate;
         
         if (
             localStorageData
@@ -1036,8 +1047,11 @@ async function collectStatsAfterDate( createDateStr, inDevDateStr, fileFormat) {
     }
 }
 
-// стори попадает в статистику если она создана после первой даты
-// и была перемещена в разработку после второй даты
-// await collectStatsAfterDate('2021.06.02', '2023.01.01', 'csv');
-await collectStatsAfterDate('2023.09.01', '2023.11.01', 'csv');
+// стори попадает в статистику если:
+// 1. она создана после первой даты
+// 2. была перемещена в разработку после второй даты
+// 3. была создана до 3 даты
+
+// await collectStats('2021.06.02', '2023.01.01', '2024.01.01');
+await collectStats('2023.10.02', '2023.12.01', '2024.01.01');
 ```
