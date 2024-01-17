@@ -62,15 +62,16 @@ LEFT JOIN (
 
 	SELECT 
 		owner as developer,
-		avg( first_estimate_delta ) avg_first_estimate_deviation,
-		avg( second_estimate_delta ) avg_second_estimate_deviation
-	FROM ( -- большой разброс в значений
-	    SELECT DISTINCT
-		story_id,
-		owner,
-		IIF(estimate_first_value - 0 > 0, actual_dev - estimate_first_value, 0) as first_estimate_delta,
-		IIF(estimate_second_value - 0 > 0, actual_dev - estimate_second_value, 0) as second_estimate_delta
-	    FROM stats
+		avg( first_estimate_delta ) as avg_first_estimate_deviation,
+		avg( second_estimate_delta ) as avg_second_estimate_deviation
+	FROM (
+		SELECT DISTINCT
+			story_id,
+			owner,
+			IIF(estimate_first_value - 0 > 0 AND actual_dev > estimate_first_value, actual_dev - estimate_first_value, 0) as first_estimate_delta,
+			IIF(estimate_second_value - 0 > 0 AND actual_dev > estimate_second_value, actual_dev - estimate_second_value, 0) as second_estimate_delta
+		FROM stats
+		WHERE epic_name != "SUPPORT BUG REPORTS"
 	)
 	GROUP BY owner
 
@@ -148,7 +149,7 @@ LEFT JOIN (
 			owner,
 			JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
 		FROM stats
-		WHERE owner != ""
+		WHERE owner != "" AND epic_name != "SUPPORT BUG REPORTS"
 	)
 	GROUP BY owner
 
