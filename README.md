@@ -37,12 +37,12 @@ SELECT
 	avg( first_estimate_delta ) as avg_first_estimate_deviation,
 	avg( second_estimate_delta ) as avg_second_estimate_deviation
 FROM (
-    SELECT DISTINCT
-	story_id,
-	owner,
-	IIF(estimate_first_value - 0 > 0 AND actual_dev > estimate_first_value, actual_dev - estimate_first_value, 0) as first_estimate_delta,
-	IIF(estimate_second_value - 0 > 0 AND actual_dev > estimate_second_value, actual_dev - estimate_second_value, 0) as second_estimate_delta
-    FROM stats
+	SELECT DISTINCT
+		story_id,
+		owner,
+		IIF(estimate_first_value - 0 > 0 AND actual_dev > estimate_first_value, actual_dev - estimate_first_value, 0) as first_estimate_delta,
+		IIF(estimate_second_value - 0 > 0 AND actual_dev > estimate_second_value, actual_dev - estimate_second_value, 0) as second_estimate_delta
+	FROM stats
 	WHERE epic_name != "SUPPORT BUG REPORTS"
 )
 GROUP BY owner
