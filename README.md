@@ -1,10 +1,10 @@
 ```js
-const FETCH_CONFIG = {
-    headers:{
-        "Tenant-Organization2": "5c916c11-d2f0-4c6b-aa34-be3b41942057",
-        "Tenant-Workspace2": "5c9176af-ad29-45f1-94f0-7e5e1d9491c0",
-        "Content-Type": "application/json"
-    }
+const SHORTCUT_TOKEN = '66059d71-364c-4409-ae45-43d9b3bc0f47';
+const SHORTCUT_FETCH_CONFIG = {
+    headers: {
+        'Content-Type': 'application/json',
+        'Shortcut-Token': SHORTCUT_TOKEN,
+    },
 };
 const LOCAL_STORAGE_KEY = 'collecting_statistics';
 
@@ -13,78 +13,60 @@ const excludeEditorsList = [
 ];
 
 if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
-    window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',FETCH_CONFIG)).json();
-    window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',FETCH_CONFIG)).json();
-    window.epics = await (await fetch('https://app.shortcut.com/backend/api/private/epics', FETCH_CONFIG)).json();
+    window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',SHORTCUT_FETCH_CONFIG)).json();
+    window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',SHORTCUT_FETCH_CONFIG)).json();
+    window.epics = await (await fetch('https://app.shortcut.com/backend/api/private/epics', SHORTCUT_FETCH_CONFIG)).json();
 }
 
-const sum = (...numbers) => {
-    return numbers.reduce((total, number) => total + number, 0);
-};
-const isObject = ( mayBeObject ) => {
-    return typeof mayBeObject === 'object' && mayBeObject !== null;
-};
+const sum = (...numbers) => numbers.reduce((total, number) => total + number, 0);
+const isObject = ( mayBeObject ) => typeof mayBeObject === 'object' && mayBeObject !== null;
 
-async function getHistoryByStoryID(id){
-    let res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, FETCH_CONFIG);
-    return await res.json();
-}
-async function getStoryObjectByStoryId(id) {
-    const res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}`, FETCH_CONFIG );
+async function getHistoryByStoryID(id) {
+    const res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, SHORTCUT_FETCH_CONFIG);
     return await res.json();
 }
 
 // функция для получения массива людей списывающих
 // определенные кастомные поля из истории (shortcut)
-function getSpandings(storyHistory, fieldNames) {
+function getSpandings(storyHistory, fieldNames, startDate, endDate) {
     let actualValue = 0;
     
     const changes = storyHistory
-        .filter( o => o.references)
-        .filter( obj => obj.references
-            .find( elem => fieldNames.includes(elem.field_name)))
+        .filter(obj => obj.references 
+            && obj.references.find(elem => fieldNames.includes(elem.field_name))
+            && new Date(obj.changed_at) > new Date(startDate)
+            && new Date(obj.changed_at) < new Date(endDate)
+        )
         .map ( obj => {
             const member = getMemberNameById(obj.member_id);
-            const references = obj.references
-                .filter( o => fieldNames.includes(o.field_name))
+            const references = obj.references.filter(o => fieldNames.includes(o.field_name))
             
-            let countChanges;
+            const countChanges = references.length === 1
+                ? parseInt(references[0].string_value) - actualValue
+                : parseInt(references[0].string_value) - parseInt(references[1].string_value);
                 
-            if (references.length === 1) {
-                countChanges = parseInt(references[0].string_value) - actualValue;
-            } else {
-                countChanges = parseInt(references[0].string_value) - parseInt(references[1].string_value);
-            }
-            
             actualValue += countChanges;
 
             return {
                 member,
                 countChanges,
-            }
+            };
         })
-        .filter ( ({member}) => !excludeEditorsList.includes(member));
+        .filter (({member}) => !excludeEditorsList.includes(member));
     
     let dictionary = {};
-    changes.forEach( change => {
-        if (dictionary[change.member]) {
-            return dictionary[change.member] += change.countChanges;
-        }
-        dictionary[change.member] = change.countChanges;
-    })
+    changes.forEach( change => dictionary[change.member]
+        ? dictionary[change.member] += change.countChanges
+        : dictionary[change.member] = change.countChanges
+    );
     
     return Object.entries(dictionary).map( ([member, total_hours]) => ({member, total_hours}))
 }
 
 // поиск имени по айди пользователя (shortcut)
 function getMemberNameById(memberId) {
-    const member = membersListJson
-        .find( m => m.id === memberId);
-
-    if (member) {
-        return member.profile.name;
-    }
-    return memberId;
+    const member = membersListJson.find( m => m.id === memberId);
+    return member ? member.profile.name : memberId;
 }
 
 // получаем значение поля по его имени (shortcut)
@@ -92,9 +74,7 @@ function getCustomFieldValue( story, fieldName) {
     const field = customFieldsJson.find( e => e.name === fieldName);
     if (field) {
         const obj = story.custom_fields.find( e => e.field_id === field.id);
-        if (obj) {
-            return obj.value;
-        }
+        return obj?.value || '';
     }
     return '';
 }
@@ -102,7 +82,7 @@ function getCustomFieldValue( story, fieldName) {
 // получаем время сумарное время ннахождения 
 // в определенном состоянии (shortcut)
 function getTotalTimeInState( stateChangesHistory, state) {
-    if (!stateChangesHistory.find( e => e.state === state )) {
+    if (!stateChangesHistory.find(e => e.state === state)) {
         return 0;
     }
     
@@ -123,10 +103,7 @@ function getTotalTimeInState( stateChangesHistory, state) {
 // поиск разницы в днях между датами (shortcut)
 function getDaysBetweenDates( dateIso1 , dateIso2) {
     if (dateIso1) {
-        const date1 = new Date(dateIso1);
-        const date2 = new Date(dateIso2 || Date.now());
-
-        return Math.floor((date2 - date1)/(60*60*24))/1000;
+        return Math.floor((new Date(dateIso2 || Date.now()) - new Date(dateIso1))/(60*60*24))/1000;
     }
     return null;
 }
@@ -218,36 +195,28 @@ function convertShortcutMemberName( str ){
 }
 
 // функция для сбора статистики с стори (shortcut)
-function createStoryStats(story, storyHistory) {
+function createStoryStats(story, storyHistory, startDate, endDate) {
     const stats = {
         story_id: story.id,
         story_name: story.name,
-        
-        type: [story.story_type[0].toUpperCase(), 
-               ...story.story_type.slice(1)
-        ].join(''),
-
+        type: [story.story_type[0].toUpperCase(), ...story.story_type.slice(1)].join(''),
         owner: convertShortcutMemberName(getMemberNameById(story.owner_ids.find(() => true))),
-
-        pulls: story.pull_requests.map( e => {
-            return {
-                pull_id: e.number,
-                url: e.url,
-                repository: e.url
-                    .replace(`https://github.com/Good-Proton/`,'')
-                    .replace(`/pull/${e.number}`,'')
-            }
-        }),
-
+        pulls: story.pull_requests.map( e => ({
+            pull_id: e.number,
+            url: e.url,
+            repository: e.url
+                .replace(`https://github.com/Good-Proton/`,'')
+                .replace(`/pull/${e.number}`,'')
+        })),
         epic_name: getEpicNameById(story.epic_id)
     };
 
-    stats.actual_dev_spendings = getSpandings(storyHistory, ['Actual', 'Actual dev'])
-                .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
-    stats.actual_review_spendings = getSpandings(storyHistory, ['Actual review'])
-                .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
-    stats.actual_qa_spendings = getSpandings(storyHistory, ['Actual QA'])
-                .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
+    stats.actual_dev_spendings = getSpandings(storyHistory, ['Actual', 'Actual dev'], startDate, endDate)
+        .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
+    stats.actual_review_spendings = getSpandings(storyHistory, ['Actual review'], startDate, endDate)
+        .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
+    stats.actual_qa_spendings = getSpandings(storyHistory, ['Actual QA'], startDate, endDate)
+        .map( ({member, total_hours}) => ({ member: convertShortcutMemberName(member), total_hours}) );
     
     stats.owners_from_history = stats.actual_dev_spendings.map( ({member}) => convertShortcutMemberName(member) );
     stats.reviewers_from_history = stats.actual_review_spendings.map( ({member}) => convertShortcutMemberName(member) );
@@ -266,35 +235,36 @@ function createStoryStats(story, storyHistory) {
     stats.estimate_qa = parseInt(getCustomFieldValue( story, 'Estimate QA' )) || null;
 
     let estimateHistory = storyHistory
-        .filter( e => e.actions && e.actions.length && e.actions
-            .find( action => action.changes && action.changes.estimate))
+        .filter( e => e.actions 
+            && e.actions.length 
+            && e.actions.find( action => action.changes && action.changes.estimate))
         .map( change => change.actions
             .find( action => action.changes && action.changes.estimate)
-            .changes.estimate.new);
+            .changes.estimate.new
+        );
     
     stats.estimate_first_value = estimateHistory[0] || null; 
     stats.estimate_second_value = estimateHistory[1] || null;
 
     let estimateQaHistory = storyHistory
-        .filter( e => e.references && e.references.length && e.references
-            .find( ref => ref.field_name === 'Estimate QA'))
-        .map( e => e.references
-            .find( ref => ref.field_name === 'Estimate QA').string_value)
+        .filter( e => e.references 
+            && e.references.length 
+            && e.references.find( ref => ref.field_name === 'Estimate QA'))
+        .map( e => e.references.find( ref => ref.field_name === 'Estimate QA').string_value)
         .map( str => parseInt(str));
     
     stats.estimate_qa_first_value = estimateQaHistory[0] || null;
     stats.estimate_qa_second_value = estimateQaHistory[1] || null;
 
     const stateChangesHistory = storyHistory
-        .filter( e => e.references && e.references.length && e.references
-            .find( ref => ref.entity_type === 'workflow-state'))
-        .map( e => {
-            return {
-                state: e.references
-                    .find( ref => ref.entity_type === 'workflow-state').name,
-                date: e.changed_at,
-            }
-        });
+        .filter( e => e.references 
+            && e.references.length 
+            && e.references.find( ref => ref.entity_type === 'workflow-state')
+        )
+        .map( e => ({
+            state: e.references.find( ref => ref.entity_type === 'workflow-state').name,
+            date: e.changed_at,
+        }));
 
     stats.state = stateChangesHistory[stateChangesHistory.length - 1].state;
     
@@ -335,13 +305,9 @@ function createStoryStats(story, storyHistory) {
 }
 
 // функция для сбора статистики с стори по айди (shortcut)
-async function getStoryStatsById( storiId ) {    
-    const story = await getStoryObjectByStoryId(storiId);
-    if (!(story.message && story.message === 'Resource not found.')) {
-        const storyHistory = await getHistoryByStoryID(storiId);
-        return createStoryStats(story, storyHistory);
-    }
-    return;
+async function getStoryStatsByStory(story, startDate, endDate) {
+    const storyHistory = await getHistoryByStoryID(story.id);
+    return createStoryStats(story, storyHistory, startDate, endDate);
 }
 
 // В гитхабе все данные подгружается в виде html кусков
@@ -364,14 +330,17 @@ function findQARejectCount( html ) {
     const substring = `data-name="QA Rejected" style="--label-r:217;--label-g:63;--label-b:11;--label-h:15;--label-s:90;--label-l:44;" data-view-component="true" class="IssueLabel hx_IssueLabel d-inline-block v-align-middle">`;
     const positions = findStringPositions( html, substring);
 
-    return positions.map( index => {
-        const textPart = html.substring(index - 150, index);
-        const cleanedText = textPart.replaceAll(' ','').replaceAll('\n','');
-        
-        const sbstr1 = `</a>added<aid="label-`;
-        const sbstr2 = `</a>addedthe<aid="label-`;
-        return cleanedText.includes(sbstr1) || cleanedText.includes(sbstr2);
-    }).filter( r => r).length;
+    return positions
+        .map( index => {
+            const textPart = html.substring(index - 150, index);
+            const cleanedText = textPart.replaceAll(' ','').replaceAll('\n','');
+            
+            const sbstr1 = `</a>added<aid="label-`;
+            const sbstr2 = `</a>addedthe<aid="label-`;
+            return cleanedText.includes(sbstr1) || cleanedText.includes(sbstr2);
+        })
+        .filter(r => r)
+        .length;
 }
 
 // ищем количество реджектов от ревьювера в html коде (github)
@@ -380,14 +349,17 @@ function findReviewerRejectCount( html ) {
     const positions = findStringPositions( html, substring);
 
     if (positions.length) {
-        return positions.map( index => {
-            const textPart = html.substring(index - 1200, index + 50);
-            
-            const substr = '<path d="M1 1.75C1 .784 1.784 0 2.75 0h7.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V4.664a.25.25 0 0 0-.073-.177l-2.914-2.914a.25.25 0 0 0-.177-.073ZM8 3.25a.75.75 0 0 1 .75.75v1.5h1.5a.75.75 0 0 1 0 1.5h-1.5v1.5a.75.75 0 0 1-1.5 0V7h-1.5a.75.75 0 0 1 0-1.5h1.5V4A.75.75 0 0 1 8 3.25Zm-3 8a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z"></path>';
-            const substr2 = '<tool-tip id="tooltip';
-            
-            return textPart.includes(substr) && !textPart.includes(substr2);
-        }).filter( c => c).length;
+        return positions
+            .map( index => {
+                const textPart = html.substring(index - 1200, index + 50);
+                
+                const substr = '<path d="M1 1.75C1 .784 1.784 0 2.75 0h7.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16H2.75A1.75 1.75 0 0 1 1 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V4.664a.25.25 0 0 0-.073-.177l-2.914-2.914a.25.25 0 0 0-.177-.073ZM8 3.25a.75.75 0 0 1 .75.75v1.5h1.5a.75.75 0 0 1 0 1.5h-1.5v1.5a.75.75 0 0 1-1.5 0V7h-1.5a.75.75 0 0 1 0-1.5h1.5V4A.75.75 0 0 1 8 3.25Zm-3 8a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z"></path>';
+                const substr2 = '<tool-tip id="tooltip';
+                
+                return textPart.includes(substr) && !textPart.includes(substr2);
+            })
+            .filter(c => c)
+            .length;
     }
     return 0;
 }
@@ -473,9 +445,10 @@ async function fetchNameByNickName(nickname) {
     const textPart = html.substring(index, index + 250);
 
     const fullName = textPart
-    .replaceAll('\n','')
-    .match(/<span class="p-name vcard-fullname d-block overflow-hidden" itemprop="name">([^<]+)<\/span> /)[1]
-    .replace(/^ +/,'').replace(/ +$/,'');
+        .replaceAll('\n','')
+        .match(/<span class="p-name vcard-fullname d-block overflow-hidden" itemprop="name">([^<]+)<\/span> /)[1]
+        .replace(/^ +/,'')
+        .replace(/ +$/,'');
 
     return fullName || nickname;
 }
@@ -546,8 +519,9 @@ async function callectPullData( url ) {
             nextUrls.push( ...findNextUrls(html) )
         })
 
-        htmls = !nextUrls.length ? [] 
-            : await Promise.all(nextUrls.map( url => fetchHtml(url) ));
+        htmls = !nextUrls.length 
+            ? [] 
+            : await Promise.all(nextUrls.map(url => fetchHtml(url)));
     }
     
     return {
@@ -558,19 +532,29 @@ async function callectPullData( url ) {
     };
 }
 
-// ищем стори созданые после какой то даты (shortcut)
-async function searchStoryInRange(startDate, endDate) {
-    const res = await fetch('https://app.shortcut.com/backend/api/private/stories/search',{
-        ...FETCH_CONFIG,
-        method: 'POST',
-        body: JSON.stringify({
-            created_at_start: startDate.toISOString(),
-            created_at_end: endDate.toISOString(),
-        }),
-    })
+// ищем story в диапозоне дат (shortcut)
+async function fetchStoryInRange(dateStart, dateEnd = '') {
+    const start = new Date(dateStart);
+    const end = dateEnd ? new Date(dateEnd) : new Date();
     
-    const array = await res.json();
-    return array.map(s => s.id).sort((num1, num2) => num1 - num2 );
+    const initUrl = new URL('https://api.app.shortcut.com/api/v3/search/stories');
+    initUrl.searchParams.set('query', `updated:${start.toJSON().slice(0,10)}..* created:*..${end.toJSON().slice(0,10)}`);
+    initUrl.searchParams.set('page_size', 25);
+
+    const accum = [];
+    let url = initUrl;
+
+    while(url) {
+        const res = await fetch(url, SHORTCUT_FETCH_CONFIG);
+
+        const data = await res.json();
+        accum.push(...data.data);
+        url = data.next && `https://api.app.shortcut.com${data.next}`;
+    }
+
+    return accum
+        .filter(o => !o.completed_at || new Date(o.completed_at) > start)
+        .sort((story1, story2) => story1.id - story2.id);
 }
 
 // сохранить в буфере обмена
@@ -790,16 +774,16 @@ function createCsvText( data, isNeedHead = true ) {
 }
 
 // Шаг1 сбор статистики с шотката (shortcut)
-async function step1(storyIds, localStorageData) {
+async function step1(stories, localStorageData, startDate, endDate) {
     const allStats = [];
 
     try {
-        for(const id of storyIds) {
-            const savedData = localStorageData && localStorageData.find( s => s.story_id === id);
-            const storyStats = savedData || await getStoryStatsById(id);
+        for(const story of stories) {
+            const savedData = localStorageData && localStorageData.find( s => s.story_id === story.id);
+            const storyStats = savedData || await getStoryStatsByStory(story, startDate, endDate);
             
             allStats.push(storyStats);
-            console.log(`Сибираем статистику по сторям ${allStats.length} / ${storyIds.length} story_id = ${id}`);
+            console.log(`Сибираем статистику по сторям ${allStats.length} / ${stories.length} story_id = ${story.id}`);
         }
         return {
             isSucces: true,
@@ -857,7 +841,7 @@ function step3(data1, data2) {
     return data1.map( (strory, i) => ({...strory, ...data2[i] }));
 }
 
-async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileFormat = 'csv') {
+async function collectStats(startDate, endDate, fileFormat = 'csv') {
     // получаем данные из хранилища и буфера обмена
     const localStorageDataJson = localStorage.getItem(LOCAL_STORAGE_KEY);
     await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
@@ -875,12 +859,8 @@ async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileForm
     const url = new URL(location.href).origin;
     
     if ( url === 'https://app.shortcut.com' ) {
-        const inDevDate = new Date(inDevDateStr);
-        const createDateStart = new Date(createDateStr);
-        const createDateEnd = new Date(endRangeDate);
-        
-        const arrayStoryIds = await searchStoryInRange(createDateStart, createDateEnd);
-        const unicString = createDateStr + inDevDateStr + endRangeDate;
+        const stories = await fetchStoryInRange(startDate, endDate);
+        const unicString = startDate + endDate;
         
         if (
             localStorageData
@@ -907,8 +887,7 @@ async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileForm
             && localStorageData.isSucces
             && exchangeBufferData.unicString === localStorageData.unicString
         ) {
-            const localData = localStorageData.data
-                .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
+            const localData = localStorageData.data;
             const step3Data = step3(localData, exchangeBufferData.data);
             const finalData = step3Data.map( storyStats => ({
                     ...storyStats,
@@ -957,7 +936,7 @@ async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileForm
                 && localStorageData.unicString === unicString
                 && localStorageData.data;
             
-            const {isSucces, data} = await step1(arrayStoryIds, savedData);
+            const {isSucces, data} = await step1(stories, savedData, startDate, endDate);
 
             const save = {
                     step: 1,
@@ -969,9 +948,6 @@ async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileForm
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(save))
 
             if (isSucces) {
-                save.data = save.data
-                    .filter( stats => new Date(stats.first_move_to_in_development) - inDevDate > 0);
-                
                 save.data = save.data.map( ({story_id, pulls}) => ({story_id, pulls}));
 
                 await askExchangeBuffer('Кликните пожалуйста по странице, это даст скрипту доступ к буферу обмена');
@@ -1047,11 +1023,9 @@ async function collectStats( createDateStr, inDevDateStr, endRangeDate, fileForm
     }
 }
 
-// стори попадает в статистику если:
-// 1. она создана после первой даты
-// 2. была перемещена в разработку после второй даты
-// 3. была создана до третьей даты
+// стори попадает в статистику если она изменялась 
+// или была закрыта в данный временной промежуток
 
-await collectStats('2021.06.02', '2023.01.01', '2024.01.01');
-// await collectStats('2023.10.02', '2023.12.01', '2024.01.01');
+await collectStats('2024.03.01', '2024.03.29');
+// await collectStats('2023.12.01', '2024.01.01');
 ```
