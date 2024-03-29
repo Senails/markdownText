@@ -1,5 +1,5 @@
 ```js
-const SHORTCUT_TOKEN = '66059d71-364c-4409-ae45-43d9b3bc0f47';
+const SHORTCUT_TOKEN = 'токен сюда';
 const SHORTCUT_FETCH_CONFIG = {
     headers: {
         'Content-Type': 'application/json',
