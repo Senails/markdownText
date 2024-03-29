@@ -235,7 +235,7 @@ LEFT JOIN (
 		FROM stats
 		WHERE actual_qa_spendings_member != "" AND state_changes_to_in_development > 0
 	)
-	GROUP BY 
+	GROUP BY actual_qa_spendings_member
  
 ) as count_table
 ON count_table.tester = names.qa
