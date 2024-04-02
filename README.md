@@ -175,6 +175,39 @@ FROM (
 GROUP BY actual_review_spendings_member
 ```
 
+13. Списания разработчика на разработку.
+```sql
+SELECT
+	actual_dev_spendings_member as developer,
+    	SUM(actual_dev_spendings_total_hours) as spendings_on_dev
+FROM (
+    SELECT DISTINCT
+    story_id,
+    actual_dev_spendings_member,
+    actual_dev_spendings_total_hours
+    FROm stats
+    WHERE actual_dev_spendings_member != ''
+)
+GROUP BY actual_dev_spendings_member
+```
+
+14. Списания разработчика на ревью.
+```sql
+SELECT
+	actual_review_spendings_member as developer,
+    SUM(actual_review_spendings_total_hours) as spendings_on_review
+FROM (
+    SELECT DISTINCT
+    story_id,
+    actual_review_spendings_member,
+    actual_review_spendings_total_hours
+    FROm stats
+    WHERE actual_review_spendings_member != ''
+)
+GROUP BY actual_review_spendings_member
+```
+
+
 1. QA Общее кол-во задач - кол-во стори, которые хоть раз переводились в статус In dev + в поле QA хоть раз стоял тестировщик Х.
 ```sql
 SELECT 
@@ -248,4 +281,20 @@ FROM(
 	GROUP BY story_id
 )
 GROUP BY qa
+```
+
+5. QA Кол-во списаний на тестирование.
+```sql
+SELECT
+	actual_qa_spendings_member as qa,
+    SUM(actual_qa_spendings_total_hours) as spendings_on_qa
+FROM (
+    SELECT DISTINCT
+    story_id,
+    actual_qa_spendings_member,
+    actual_qa_spendings_total_hours
+    FROm stats
+    WHERE actual_qa_spendings_member != ''
+)
+GROUP BY actual_qa_spendings_member
 ```
