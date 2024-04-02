@@ -16,7 +16,9 @@ SELECT DISTINCT
     time_story_table.avg_time_on_story,
     reviewed_table.review_story_count,
     waiting_table.avg_wait_review,
-    review_spandings_table.avg_spandings_for_review
+    review_spandings_table.avg_spandings_for_review,
+    sum_dev_spandings_table.spendings_on_dev,
+    sum_review_spandings_table.spendings_on_review
 FROM (
     SELECT developer
     FROM (
@@ -200,7 +202,39 @@ LEFT JOIN (
     )
     GROUP BY actual_review_spendings_member
 
-) AS review_spandings_table ON review_spandings_table.developer = names.developer;
+) AS review_spandings_table ON review_spandings_table.developer = names.developer
+LEFT JOIN (
+
+    SELECT
+        actual_dev_spendings_member as developer,
+        SUM(actual_dev_spendings_total_hours) as spendings_on_dev
+    FROM (
+        SELECT DISTINCT
+        story_id,
+        actual_dev_spendings_member,
+        actual_dev_spendings_total_hours
+        FROm stats
+        WHERE actual_dev_spendings_member != ''
+    )
+    GROUP BY actual_dev_spendings_member
+
+) AS sum_dev_spandings_table ON sum_dev_spandings_table.developer = names.developer
+LEFT JOIN (
+
+    SELECT
+        actual_review_spendings_member as developer,
+        SUM(actual_review_spendings_total_hours) as spendings_on_review
+    FROM (
+        SELECT DISTINCT
+        story_id,
+        actual_review_spendings_member,
+        actual_review_spendings_total_hours
+        FROm stats
+        WHERE actual_review_spendings_member != ''
+    )
+    GROUP BY actual_review_spendings_member
+
+) AS sum_review_spandings_table ON sum_review_spandings_table.developer = names.developer;
 ```
 
 ### QA
