@@ -211,7 +211,8 @@ SELECT DISTINCT
 	deviation_table.avg_deviation,
 	qa_part_table.avg_qa_part,
 	reject_table.avg_state_changes_to_in_qa,
-	reject_table.avg_pulls_qa_rejected_count
+	reject_table.avg_pulls_qa_rejected_count,
+	spendings_table.spendings_on_qa
 FROM (
 
 	SELECT qa
@@ -302,5 +303,20 @@ LEFT JOIN (
 
 ) as reject_table
 ON reject_table.tester = names.qa
-WHERE names.qa != "";
+LEFT JOIN (
+	SELECT
+        actual_qa_spendings_member as tester,
+        SUM(actual_qa_spendings_total_hours) as spendings_on_qa
+    FROM (
+        SELECT DISTINCT
+        story_id,
+        actual_qa_spendings_member,
+        actual_qa_spendings_total_hours
+        FROm stats
+        WHERE actual_qa_spendings_member != ''
+    )
+    GROUP BY actual_qa_spendings_member
+) as spendings_table
+ON spendings_table.tester = names.qa
+WHERE names.qa != ""
 ```
