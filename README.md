@@ -546,8 +546,25 @@ async function fetchStoryInRange(dateStart, dateEnd = '') {
 
     while(url) {
         const res = await fetch(url, SHORTCUT_FETCH_CONFIG);
-
         const data = await res.json();
+
+        if (data.total >= 950) {
+            const midlDate = new Date((start.getTime() + end.getTime())/2);
+
+            const res1 = await fetchStoryInRange(start.toISOString(), midlDate.toISOString());
+            const res2 = await fetchStoryInRange(midlDate.toISOString(), end.toISOString());
+
+            const union = [...res1];
+            res2.forEach(story1 => {
+                if (!res1.find(story2 => story1.id === story2.id)) {
+                    union.push(story1);
+                }
+            });
+            
+            accum.push(...union)
+            break;
+        }
+        
         accum.push(...data.data);
         url = data.next && `https://api.app.shortcut.com${data.next}`;
     }
@@ -859,7 +876,6 @@ async function collectStats(startDate, endDate, fileFormat = 'csv') {
     const url = new URL(location.href).origin;
     
     if ( url === 'https://app.shortcut.com' ) {
-        const stories = await fetchStoryInRange(startDate, endDate);
         const unicString = startDate + endDate;
         
         if (
@@ -931,6 +947,8 @@ async function collectStats(startDate, endDate, fileFormat = 'csv') {
             || !localStorageData.isSucces
             || localStorageData.unicString !== unicString
         ) {
+            console.log('началась загрузка списка сторей, она займет какое-то время');
+            const stories = await fetchStoryInRange(startDate, endDate);
             const savedData = 
                 localStorageData 
                 && localStorageData.unicString === unicString
@@ -1026,6 +1044,6 @@ async function collectStats(startDate, endDate, fileFormat = 'csv') {
 // стори попадает в статистику если она изменялась 
 // или была закрыта в данный временной промежуток
 
-await collectStats('2024.03.01', '2024.03.29');
+await collectStats('2023.01.01', '2024.04.09');
 // await collectStats('2023.12.01', '2024.01.01');
 ```
