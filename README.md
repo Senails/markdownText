@@ -1,9 +1,9 @@
 ```js
 (async () => {
     while (true) {
-        // zoho crm token
-        const token = '1000.701ec66f1d74f1cff67f6c3d6bcbb763.91e9c15091724b686a448ead7360217c';
-        const url = 'https://www.zohoapis.eu/crm/v6/settings/fields?module=Leads';
+        // zoho recruit token
+        const token = '1000.e4d32a2748a87b09aa89eac779754fed.8b414b8bc55f63244b539cbc6576deda';
+        const url = 'https://recruit.zoho.eu/recruit/v2/settings/fields?module=Candidates';
 
         let res;
         try {
@@ -14,16 +14,18 @@
 
         const headers = Object.fromEntries(Array.from(res.headers));
         const headerKeys = Object.keys(headers);
-    
-        const neededHeader = 'X-API-CREDITS-REMAINING';
-        const key = headerKeys.find(key => key.toLowerCase() === neededHeader.toLowerCase());
+        const zohoRecruiteLimitKey = headerKeys.find(key => key.toLowerCase() === 'x-ratelimit-remaining');
 
-        if (!key) continue;
+        if (!zohoRecruiteLimitKey) {
+            console.log('исчерпали дневной лимит');
+            return;
+        }
         
-        const apiCreditsCount = headers[key];
-        if (apiCreditsCount > 0) continue;
-        
-        return console.log(apiCreditsCount);
+        if (Number(headers[zohoRecruiteLimitKey]) === 0) {
+            console.log('исчерпали минутный лимит');
+            await new Promise(res => setTimeout(res, headers['x-ratelimit-reset'] - Date.now()));
+            console.log('минутный лимит восстановлен, продолжаем запросы');
+        }
     }
 })();
 ```
