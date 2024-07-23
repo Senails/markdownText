@@ -1,9 +1,8 @@
 ```js
-// zoho crm token
-const token = '1000.701ec66f1d74f1cff67f6c3d6bcbb763.91e9c15091724b686a448ead7360217c';
-
 (async () => {
     while (true) {
+        // zoho crm token
+        const token = '1000.701ec66f1d74f1cff67f6c3d6bcbb763.91e9c15091724b686a448ead7360217c';
         const url = 'https://www.zohoapis.eu/crm/v6/settings/fields?module=Leads';
 
         let res;
