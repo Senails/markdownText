@@ -13,16 +13,16 @@ const excludeEditorsList = [
 ];
 
 if ( new URL(location.href).origin === 'https://app.shortcut.com' ) {
-    window.customFieldsJson = await (await fetch('https://app.shortcut.com/backend/api/private/custom-fields',SHORTCUT_FETCH_CONFIG)).json();
-    window.membersListJson = await (await fetch('https://app.shortcut.com/backend/api/private/members',SHORTCUT_FETCH_CONFIG)).json();
-    window.epics = await (await fetch('https://app.shortcut.com/backend/api/private/epics', SHORTCUT_FETCH_CONFIG)).json();
+    window.customFieldsJson = await (await fetch('https://api.app.shortcut.com/api/v3/custom-fields',SHORTCUT_FETCH_CONFIG)).json();
+    window.membersListJson = await (await fetch('https://api.app.shortcut.com/api/v3/members',SHORTCUT_FETCH_CONFIG)).json();
+    window.epics = await (await fetch('https://api.app.shortcut.com/api/v3/epics', SHORTCUT_FETCH_CONFIG)).json();
 }
 
 const sum = (...numbers) => numbers.reduce((total, number) => total + number, 0);
 const isObject = ( mayBeObject ) => typeof mayBeObject === 'object' && mayBeObject !== null;
 
 async function getHistoryByStoryID(id) {
-    const res = await fetch(`https://app.shortcut.com/backend/api/private/stories/${id}/history`, SHORTCUT_FETCH_CONFIG);
+    const res = await fetch(`https://api.app.shortcut.com/api/v3/stories/${id}/history`, SHORTCUT_FETCH_CONFIG);
     return await res.json();
 }
 
@@ -1044,6 +1044,6 @@ async function collectStats(startDate, endDate, fileFormat = 'csv') {
 // стори попадает в статистику если она изменялась 
 // или была закрыта в данный временной промежуток
 
-await collectStats('2023.01.01', '2024.04.09');
+await collectStats('2024.08.25', '2024.09.25');
 // await collectStats('2023.12.01', '2024.01.01');
 ```
