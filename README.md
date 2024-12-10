@@ -28,7 +28,7 @@ FROM (
 		UNION 
         SELECT actual_review_spendings_member AS developer FROM stats
     )
-    WHERE developer != ""
+    WHERE developer != ''
 ) AS names
 LEFT JOIN (
 
@@ -38,7 +38,7 @@ LEFT JOIN (
     FROM(
         SELECT DISTINCT 
             story_id,
-            IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member) AS developer 
+            IIF(actual_dev_spendings_member == '', owner, actual_dev_spendings_member) AS developer 
         FROM stats
         WHERE state_changes_to_in_development > 0
     )
@@ -53,9 +53,9 @@ LEFT JOIN (
     FROM(
         SELECT DISTINCT 
             story_id,
-            IIF(actual_dev_spendings_member == "", owner, actual_dev_spendings_member) AS developer
+            IIF(actual_dev_spendings_member == '', owner, actual_dev_spendings_member) AS developer
         FROM stats
-        WHERE state == "Completed"
+        WHERE state == 'Completed'
     )
     GROUP BY developer
 
@@ -73,7 +73,7 @@ LEFT JOIN (
 			IIF(estimate_first_value - 0 > 0 AND actual_dev > estimate_first_value, actual_dev - estimate_first_value, 0) as first_estimate_delta,
 			IIF(estimate_second_value - 0 > 0 AND actual_dev > estimate_second_value, actual_dev - estimate_second_value, 0) as second_estimate_delta
 		FROM stats
-		WHERE epic_name != "SUPPORT BUG REPORTS"
+		WHERE epic_name != 'SUPPORT BUG REPORTS'
 	)
 	GROUP BY owner
 
@@ -151,7 +151,7 @@ LEFT JOIN (
 			owner,
 			JULIANDAY(story_completed_at) - JULIANDAY(first_move_to_in_development) as time_on_story
 		FROM stats
-		WHERE owner != "" AND epic_name != "SUPPORT BUG REPORTS"
+		WHERE owner != '' AND epic_name != 'SUPPORT BUG REPORTS'
 	)
 	GROUP BY owner
 
@@ -166,7 +166,7 @@ LEFT JOIN (
             story_id,
             reviewer
         FROM stats
-        WHERE reviewer != ""
+        WHERE reviewer != ''
     )
     GROUP BY reviewer
 
@@ -182,7 +182,7 @@ LEFT JOIN (
             total_days_ready_for_review,
             reviewer
         FROM stats
-        WHERE reviewer != ""
+        WHERE reviewer != ''
     )
     GROUP BY reviewer
 
@@ -198,7 +198,7 @@ LEFT JOIN (
             actual_review_spendings_member,
             actual_review_spendings_total_hours
         FROM stats
-        WHERE actual_review_spendings_member != ""
+        WHERE actual_review_spendings_member != ''
     )
     GROUP BY actual_review_spendings_member
 
