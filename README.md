@@ -255,7 +255,7 @@ FROM (
 		UNION 
 		SELECT actual_qa_spendings_member as qa FROM stats
 	)
-	WHERE qa != ""
+	WHERE qa != ''
 
 ) as names
 LEFT JOIN (
@@ -268,7 +268,7 @@ LEFT JOIN (
 			story_id,
 			actual_qa_spendings_member
 		FROM stats
-		WHERE actual_qa_spendings_member != "" AND state_changes_to_in_development > 0
+		WHERE actual_qa_spendings_member != '' AND state_changes_to_in_development > 0
 	)
 	GROUP BY actual_qa_spendings_member
  
@@ -285,7 +285,7 @@ LEFT JOIN (
 			qa,
 			actual_qa - estimate_qa as deviation
 		FROM stats
-		WHERE qa != "" AND actual_qa > 0
+		WHERE qa != '' AND actual_qa > 0
 	)
 	GROUP BY qa
 
@@ -303,7 +303,7 @@ LEFT JOIN (
 			actual_qa - 0 as actual_qa,
 			actual_dev - 0 as actual_dev
 		FROM stats
-		WHERE qa != "" AND actual_qa > 0
+		WHERE qa != '' AND actual_qa > 0
 	)
 	GROUP BY qa
 
@@ -329,7 +329,7 @@ LEFT JOIN (
 				pull_links,
 				pulls_qa_rejected_count - 0 as pulls_qa_rejected_count
 			FROM stats
-			WHERE qa != ""
+			WHERE qa != ''
 		)
 		GROUP BY story_id
 	)
@@ -352,5 +352,5 @@ LEFT JOIN (
     GROUP BY actual_qa_spendings_member
 ) as spendings_table
 ON spendings_table.tester = names.qa
-WHERE names.qa != ""
+WHERE names.qa != ''
 ```
